@@ -2,6 +2,7 @@
 
 
 struct Colour FallOffMultiplyer = { 0.7f, 0.6f, 0.3f };
+const struct Colour WHITE = { 1.0f, 1.0f, 1.0f };
 
 void GLUE_COLOUR(struct Colour c) {
 	glColor3f(c.r, c.g, c.b); //Sets the GL colour using the colour struct
@@ -322,9 +323,10 @@ struct OBJ loadOBJ(char path[]) {
 			faceIndex++;
 		}
 	}
-
-	obj.colour = { 1, 1, 1 };
-	obj.Scale = 1;
+ 
+		
+	obj.colour = WHITE;//Set default OBJ colour to white
+	obj.Scale = 1; //Set scale to 1
 
 	return obj;
 }
