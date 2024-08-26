@@ -67,42 +67,6 @@ struct Velocity {
 	float vz;
 };
 
-/// <summary>
-/// .obj Vertex
-/// </summary>
-struct Vertex {
-	float x;
-	float y;
-	float z;
-};
-
-/// <summary>
-/// .obj Face
-/// </summary>
-struct Face {
-	struct Vertex v1;
-	struct Vertex v2;
-	struct Vertex v3;
-};
-
-/// <summary>
-/// Angle of rotation in degrees 0-360
-/// </summary>
-struct Rotation {
-	float roll;
-	float pitch;
-	float yaw;
-};
-
-struct OBJ {
-	struct Vertex Vertexes[0xFFFF];
-	struct Face Faces[0xFFFF];
-	struct Location;
-	struct Roation;
-	float Scale; //Scale modifyer of object
-	struct Colour colour;
-};
-
 enum ParticleState
 {
 	ALIVE, DEAD
@@ -125,6 +89,44 @@ struct Particle {
 	enum ParticleState state;
 	int id;
 };
+
+typedef struct {
+	GLfloat x;
+	GLfloat y;
+	GLfloat z;
+} vec3d;
+
+typedef struct {
+	GLfloat x;
+	GLfloat y;
+} vec2d;
+
+typedef struct {
+	int vertexIndex;	// Index of this vertex in the object's vertices array
+	int texCoordIndex; // Index of the texture coordinate for this vertex in the object's texCoords array
+	int normalIndex;	// Index of the normal for this vertex in the object's normals array
+} meshObjectFacePoint;
+
+typedef struct {
+	int pointCount;
+	meshObjectFacePoint* points;
+} meshObjectFace;
+
+typedef struct {
+	int vertexCount;
+	vec3d* vertices;
+	int texCoordCount;
+	vec2d* texCoords;
+	int normalCount;
+	vec3d* normals;
+	int faceCount;
+	meshObjectFace* faces;
+	vec3d* scale;
+	vec3d* rotation;
+	vec3d* offset;
+} MeshOBJ;
+
+
 
 /// <summary>
 /// Tints the "shadows" to a set colour (lower value mean more of that colour)
@@ -270,57 +272,31 @@ static void GLUE_TreeBranch(struct Location startPoint, struct Colour baseColour
 int getParticleCount(int screenHeight);
 
 /// <summary>
-/// Takes in a vertex line "v -1.397474 -1.693815 -0.570541" and parses it to a vertex 
+/// Loads a mesh object from a file
 /// </summary>
-struct Vertex newVertex(char line[]);
-
-
-/// <summary>
-/// Creates a new face from the vertex array;
-/// </summary>
-/// <param name="line"></param>
-/// <param name="vertexes"></param>
+/// <param name="fileName"></param>
 /// <returns></returns>
-struct Face newFace(char line[], struct Vertex* vertexes[]);
+MeshOBJ* loadMeshObject(char* fileName);
 
 /// <summary>
-/// Copies a second from a larger array into a smaller array, start and end are NOT inclusive
+/// Displays the mesh object
 /// </summary>
-void strCopy(char* orginal[], char* copyTo[], int startIndex, int endIndex);
+/// <param name="object"></param>
+void renderMeshObject(MeshOBJ* object);
 
 /// <summary>
-/// Loads an OBJ from a file path and returns it as a struct
+/// Creates a mesh object face
 /// </summary>
-/// <param name="path"></param>
-/// <returns></returns>
-struct OBJ loadOBJ(char path[]);
-
+/// <param name="face"></param>
+/// <param name="faceData"></param>
+/// <param name="faceDataLength"></param>
+void initMeshObjectFace(meshObjectFace* face, char* faceData, int faceDataLength);
 
 /// <summary>
-/// Renders the OBJ to the screen
+/// Deletes the mesh object to save memory
 /// </summary>
-/// <param name="obj"></param>
-void drawOBJ(struct OBJ obj);
-
-/// <summary>
-/// Scales the OBJ
-/// </summary>
-/// <param name=""></param>
-/// <param name="scalar"></param>
-void scaleOBJ(struct OBJ obj, float scalar);
-
-/// <summary>
-/// Sets the location of the OBJ
-/// </summary>
-/// <param name="obj"></param>
-/// <param name="location"></param>
-void positionOBJ(struct OBJ obj, struct Location location);
-
-/// <summary>
-/// Rotates the OBJ
-/// </summary>
-/// <param name="obj"></param>
-/// <param name="rotation"></param>
-void rotateOBJ(struct OBJ obj, struct Rotation rotation);
+/// <param name="object"></param>
+void freeMeshObject(MeshOBJ* object);
 
 
+int loadPPM(char* filename);

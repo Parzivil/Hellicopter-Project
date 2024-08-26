@@ -12,9 +12,7 @@
 * included in the animationalcontrol.c template. There are no other changes.
 *
 ******************************************************************************/
-#include <Windows.h>
-#include <freeglut.h>
-#include <math.h>
+#include "GLUE.h"
 /******************************************************************************
 * Animation & Timing Setup
 ******************************************************************************/
@@ -106,6 +104,7 @@ void specialKeyPressed(int key, int x, int y);
 void keyReleased(unsigned char key, int x, int y);
 void specialKeyReleased(int key, int x, int y);
 void idle(void);
+void close(void);
 /******************************************************************************
 * Animation-Specific Function Prototypes (add your own here)
 ******************************************************************************/
@@ -118,20 +117,36 @@ void initLights(void);
 ******************************************************************************/
 // Render objects as filled polygons (1) or wireframes (0). Default filled.
 int renderFillEnabled = 1;
+MeshOBJ* cubeMesh;
+GLuint spotsTexture;
+GLfloat cameraPosition[] = { 4, 4, 2 };
+
+GLint windowWidth = 800;
+GLint windowHeight = 400;
+
+vec3d offset = { 0, 0, -1 };
+
+
 /******************************************************************************
 * Entry Point (don't put anything except the main function here)
 ******************************************************************************/
 void main(int argc, char** argv)
 {
-	// Initialize the OpenGL window.
+	// Initialise the OpenGL window.
 	glutInit(&argc, argv);
 	glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
-	glutInitWindowSize(1000, 800);
+	glutInitWindowSize(windowWidth, windowHeight);
+	// set window position on screen
+	glutInitWindowPosition(100, 100);
+
 	glutCreateWindow("Animation");
+
 	// Set up the scene.
 	init();
+
 	// Disable key repeat (keyPressed or specialKeyPressed will only be called once when a key is first pressed).
 	glutSetKeyRepeat(GLUT_KEY_REPEAT_OFF);
+
 	// Register GLUT callbacks.
 	glutDisplayFunc(display);
 	glutReshapeFunc(reshape);
@@ -140,89 +155,135 @@ void main(int argc, char** argv)
 	glutKeyboardUpFunc(keyReleased);
 	glutSpecialUpFunc(specialKeyReleased);
 	glutIdleFunc(idle);
+	glutCloseFunc(close);
+
 	// Record when we started rendering the very first frame (which should happen after we call glutMainLoop).
 	frameStartTime = (unsigned int)glutGet(GLUT_ELAPSED_TIME);
+
 	// Enter the main drawing loop (this will never return).
 	glutMainLoop();
 }
 /******************************************************************************
 * GLUT Callbacks (don't add any other functions here)
 ******************************************************************************/
-/*
-Called when GLUT wants us to (re)draw the current animation frame.
-Note: This function must not do anything to update the state of our
-simulated
-world. Animation (moving or rotating things, responding to keyboard input,
-etc.) should only be performed within the think() function provided below.
-*/
+
 void display(void)
 {
-	/*
-	TEMPLATE: REPLACE THIS COMMENT WITH YOUR DRAWING CODE
-	Separate reusable pieces of drawing code into functions, which you can
-	add
-	to the "Animation-Specific Functions" section below.
-	Remember to add prototypes for any new functions to the "Animation-
-	Specific
-	Function Prototypes" section near the top of this template.
-	*/
+	// clear the screen and depth buffer
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	// load the identity matrix into the model view matrix
+	glLoadIdentity();
+
+	// set the camera position so we can "see" the cube drawn at (0,0,0)
+	gluLookAt(cameraPosition[0], cameraPosition[1], cameraPosition[2],
+		0, 0, 0,
+		0, 1, 0);
+
+	glColor3f(1.0f, 1.0f, 1.0f);
+
+	glEnable(GL_COLOR_MATERIAL);
+
+	//renderMeshObject(cubeMesh); //untextured
+
+	glColor3f(0.0f, 1.0f, 1.0f);
+	glutWireSphere(0.5, 10, 10);
+	glBegin(GL_LINES);
+
+	//x axis -red
+	glColor3f(1.0f, 0.0f, 0.0f);
+	glVertex3f(0.0f, 0.0f, 0.0f);
+	glVertex3f(2.0f, 0.0f, 0.0f);
+
+	//y axis -green
+	glColor3f(0.0f, 1.0f, 0.0f);
+	glVertex3f(0.0f, 0.0f, 0.0f);
+	glVertex3f(0.0f, 2.0f, 0.0f);
+
+	//z axis - blue
+	glColor3f(0.0f, 0.0f, 1.0f);
+	glVertex3f(0.0f, 0.0f, 0.0f);
+	glVertex3f(0.0f, 0.0f, 2.0f);
+
+	glEnd();
+
+	//textured object
+	glColor3f(1.0f, 1.0f, 1.0f); //base color is light pink
+	glEnable(GL_TEXTURE_2D);
+	glBindTexture(GL_TEXTURE_2D, spotsTexture);
+	renderMeshObject(cubeMesh);
+	glDisable(GL_TEXTURE_2D);
+	glDisable(GL_COLOR_MATERIAL);
+
+	// swap the drawing buffers
+	glutSwapBuffers();
 }
 
-/*
-Called when the OpenGL window has been resized.
-*/
 void reshape(int width, int h)
 {
+	// update the new width
+	windowWidth = width;
+	// update the new height
+	windowHeight = h;
+
+	// update the viewport to still be all of the window
+	glViewport(0, 0, windowWidth, windowHeight);
+
+	// change into projection mode so that we can change the camera properties
+	glMatrixMode(GL_PROJECTION);
+
+	// load the identity matrix into the projection matrix
+	glLoadIdentity();
+
+	// gluPerspective(fovy, aspect, near, far)
+	gluPerspective(45, (float)windowWidth / (float)windowHeight, 1, 20);
+
+	// change into model-view mode so that we can change the object positions
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
 }
 
-/*
-Called each time a character key (e.g. a letter, number, or symbol) is
-pressed.
-*/
+void close(void) {
+	freeMeshObject(cubeMesh);
+}
+
 void keyPressed(unsigned char key, int x, int y)
 {
 	switch (tolower(key)) {
-		/*
-		Keyboard-Controlled Motion Handler - DON'T CHANGE THIS SECTION
-		Whenever one of our movement keys is pressed, we do two things:
-		(1) Update motionKeyStates to record that the key is held down. We use
-		this later in the keyReleased callback.
-		(2) Update the relevant axis in keyboardMotion to set the new direction
-		we should be moving in. The most recent key always "wins" (e.g.
-		if
-		you're holding down KEY_MOVE_LEFT then also pressed
-		KEY_MOVE_RIGHT,
-		our object will immediately start moving right).
-		*/
-	case KEY_MOVE_FORWARD:
-		motionKeyStates.MoveForward = KEYSTATE_DOWN;
-		keyboardMotion.Surge = MOTION_FORWARD;
-		break;
-	case KEY_MOVE_BACKWARD:
-		motionKeyStates.MoveBackward = KEYSTATE_DOWN;
-		keyboardMotion.Surge = MOTION_BACKWARD;
-		break;
-	case KEY_MOVE_LEFT:
-		motionKeyStates.MoveLeft = KEYSTATE_DOWN;
-		keyboardMotion.Sway = MOTION_LEFT;
-		break;
-	case KEY_MOVE_RIGHT:
-		motionKeyStates.MoveRight = KEYSTATE_DOWN;
-		keyboardMotion.Sway = MOTION_RIGHT;
-		break;
-		/*
-		Other Keyboard Functions (add any new character key controls here)
-		Rather than using literals (e.g. "t" for spotlight), create a new KEY_
-		definition in the "Keyboard Input Handling Setup" section of this file.
-		For example, refer to the existing keys used here (KEY_MOVE_FORWARD,
-		KEY_MOVE_LEFT, KEY_EXIT, etc).
-		*/
-	case KEY_RENDER_FILL:
-		renderFillEnabled = !renderFillEnabled;
-		break;
-	case KEY_EXIT:
-		exit(0);
-		break;
+		case KEY_MOVE_FORWARD:
+			motionKeyStates.MoveForward = KEYSTATE_DOWN;
+			keyboardMotion.Surge = MOTION_FORWARD;
+
+			offset.z -= 0.1;
+			cubeMesh->offset = &offset;
+			break;
+		case KEY_MOVE_BACKWARD:
+			motionKeyStates.MoveBackward = KEYSTATE_DOWN;
+			keyboardMotion.Surge = MOTION_BACKWARD;
+
+			offset.z += 0.1;
+			cubeMesh->offset = &offset;
+			break;
+		case KEY_MOVE_LEFT:
+			motionKeyStates.MoveLeft = KEYSTATE_DOWN;
+			keyboardMotion.Sway = MOTION_LEFT;
+
+			offset.x -= 0.1;
+			cubeMesh->offset = &offset;
+			break;
+		case KEY_MOVE_RIGHT:
+			motionKeyStates.MoveRight = KEYSTATE_DOWN;
+			keyboardMotion.Sway = MOTION_RIGHT;
+			offset.x += 0.1;
+			cubeMesh->offset = &offset;
+			break;
+
+		case KEY_RENDER_FILL:
+			renderFillEnabled = !renderFillEnabled;
+			break;
+		case KEY_EXIT:
+			exit(0);
+			break;
 	}
 }
 /*
@@ -231,95 +292,49 @@ Called each time a "special" key (e.g. an arrow key) is pressed.
 void specialKeyPressed(int key, int x, int y)
 {
 	switch (key) {
-		/*
-		Keyboard-Controlled Motion Handler - DON'T CHANGE THIS SECTION
-		This works as per the motion keys in keyPressed.
-		*/
-	case SP_KEY_MOVE_UP:
-		motionKeyStates.MoveUp = KEYSTATE_DOWN;
-		keyboardMotion.Heave = MOTION_UP;
-		break;
-	case SP_KEY_MOVE_DOWN:
-		motionKeyStates.MoveDown = KEYSTATE_DOWN;
-		keyboardMotion.Heave = MOTION_DOWN;
-		break;
-	case SP_KEY_TURN_LEFT:
-		motionKeyStates.TurnLeft = KEYSTATE_DOWN;
-		keyboardMotion.Yaw = MOTION_ANTICLOCKWISE;
-		break;
-	case SP_KEY_TURN_RIGHT:
-		motionKeyStates.TurnRight = KEYSTATE_DOWN;
-		keyboardMotion.Yaw = MOTION_CLOCKWISE;
-		break;
-		/*
-		Other Keyboard Functions (add any new special key controls here)
-		Rather than directly using the GLUT constants (e.g. GLUT_KEY_F1),
-		create
-		a new SP_KEY_ definition in the "Keyboard Input Handling Setup" section
-		of
-		this file. For example, refer to the existing keys used here
-		(SP_KEY_MOVE_UP,
-		SP_KEY_TURN_LEFT, etc).
-		*/
+		case SP_KEY_MOVE_UP:
+			motionKeyStates.MoveUp = KEYSTATE_DOWN;
+			keyboardMotion.Heave = MOTION_UP;
+			break;
+		case SP_KEY_MOVE_DOWN:
+			motionKeyStates.MoveDown = KEYSTATE_DOWN;
+			keyboardMotion.Heave = MOTION_DOWN;
+			break;
+		case SP_KEY_TURN_LEFT:
+			motionKeyStates.TurnLeft = KEYSTATE_DOWN;
+			keyboardMotion.Yaw = MOTION_ANTICLOCKWISE;
+			break;
+		case SP_KEY_TURN_RIGHT:
+			motionKeyStates.TurnRight = KEYSTATE_DOWN;
+			keyboardMotion.Yaw = MOTION_CLOCKWISE;
+			break;
 	}
 }
-/*
-Called each time a character key (e.g. a letter, number, or symbol) is
-released.
-*/
+
 void keyReleased(unsigned char key, int x, int y)
 {
 	switch (tolower(key)) {
-		/*
-		Keyboard-Controlled Motion Handler - DON'T CHANGE THIS SECTION
-		Whenever one of our movement keys is released, we do two things:
-		(1) Update motionKeyStates to record that the key is no longer held
-		down;
-		we need to know when we get to step (2) below.
-		(2) Update the relevant axis in keyboardMotion to set the new direction
-		we should be moving in. This gets a little complicated to ensure
-		the controls work smoothly. When the user releases a key that
-		moves
-		in one direction (e.g. KEY_MOVE_RIGHT), we check if its
-		"opposite"
-		key (e.g. KEY_MOVE_LEFT) is pressed down. If it is, we begin
-		moving
-		in that direction instead. Otherwise, we just stop moving.
-		*/
-	case KEY_MOVE_FORWARD:
-		motionKeyStates.MoveForward = KEYSTATE_UP;
-		keyboardMotion.Surge = (motionKeyStates.MoveBackward ==
-			KEYSTATE_DOWN) ? MOTION_BACKWARD : MOTION_NONE;
-		break;
-	case KEY_MOVE_BACKWARD:
-		motionKeyStates.MoveBackward = KEYSTATE_UP;
-		keyboardMotion.Surge = (motionKeyStates.MoveForward == KEYSTATE_DOWN) ?
-			MOTION_FORWARD : MOTION_NONE;
-		break;
-	case KEY_MOVE_LEFT:
-		motionKeyStates.MoveLeft = KEYSTATE_UP;
-		keyboardMotion.Sway = (motionKeyStates.MoveRight == KEYSTATE_DOWN) ?
-			MOTION_RIGHT : MOTION_NONE;
-		break;
-	case KEY_MOVE_RIGHT:
-		motionKeyStates.MoveRight = KEYSTATE_UP;
-		keyboardMotion.Sway = (motionKeyStates.MoveLeft == KEYSTATE_DOWN) ?
-			MOTION_LEFT : MOTION_NONE;
-		break;
-		/*
-		Other Keyboard Functions (add any new character key controls here)
-		Note: If you only care when your key is first pressed down, you don't
-		have to
-		add anything here. You only need to put something in keyReleased if you
-		care
-		what happens when the user lets go, like we do with our movement keys
-		above.
-		For example: if you wanted a spotlight to come on while you held down
-		"t", you
-		would need to set a flag to turn the spotlight on in keyPressed, and
-		update the
-		flag to turn it off in keyReleased.
-		*/
+		case KEY_MOVE_FORWARD:
+			motionKeyStates.MoveForward = KEYSTATE_UP;
+			keyboardMotion.Surge = (motionKeyStates.MoveBackward ==
+				KEYSTATE_DOWN) ? MOTION_BACKWARD : MOTION_NONE;
+			break;
+		case KEY_MOVE_BACKWARD:
+			motionKeyStates.MoveBackward = KEYSTATE_UP;
+			keyboardMotion.Surge = (motionKeyStates.MoveForward == KEYSTATE_DOWN) ?
+				MOTION_FORWARD : MOTION_NONE;
+			break;
+		case KEY_MOVE_LEFT:
+			motionKeyStates.MoveLeft = KEYSTATE_UP;
+			keyboardMotion.Sway = (motionKeyStates.MoveRight == KEYSTATE_DOWN) ?
+				MOTION_RIGHT : MOTION_NONE;
+			break;
+		case KEY_MOVE_RIGHT:
+			motionKeyStates.MoveRight = KEYSTATE_UP;
+			keyboardMotion.Sway = (motionKeyStates.MoveLeft == KEYSTATE_DOWN) ?
+				MOTION_LEFT : MOTION_NONE;
+			break;
+
 	}
 }
 /*
@@ -362,14 +377,7 @@ void specialKeyReleased(int key, int x, int y)
 		*/
 	}
 }
-/*
-Called by GLUT when it's not rendering a frame.
-Note: We use this to handle animation and timing. You shouldn't need to
-modify
-this callback at all. Instead, place your animation logic (e.g. moving or
-rotating
-things) within the think() method provided with this template.
-*/
+
 void idle(void)
 {
 	// Wait until it's time to render the next frame.
@@ -390,73 +398,25 @@ void idle(void)
 /******************************************************************************
 * Animation-Specific Functions (Add your own functions at the end of this section)
 ******************************************************************************/
-/*
-Initialise OpenGL and set up our scene before we begin the render loop.
-*/
+
 void init(void)
 {
+
 	initLights();
-	// Anything that relies on lighting or specifies normals must be initialised after initLights.
+	
+	//load assets
+	cubeMesh = loadMeshObject("pumpkin.obj");
+	vec3d scale = { 0.05, 0.05, 0.05 };
+	cubeMesh->scale = &scale;
+	//vec3d offset = { -1, 0, 11 };
+	//cubeMesh->offset = &offset;
+
+	spotsTexture = loadPPM("spots.ppm");
 }
-/*
-Advance our animation by FRAME_TIME milliseconds.
-Note: Our template's GLUT idle() callback calls this once before each new
-frame is drawn, EXCEPT the very first frame drawn after our application
-starts. Any setup required before the first frame is drawn should be placed
-in init().
-*/
+
 void think(void)
 {
-	/*
-	TEMPLATE: REPLACE THIS COMMENT WITH YOUR ANIMATION/SIMULATION CODE
-	In this function, we update all the variables that control the animated
-	parts of our simulated world. For example: if you have a moving box,
-	this is
-	where you update its coordinates to make it move. If you have something
-	that
-	spins around, here's where you update its angle.
-	NOTHING CAN BE DRAWN IN HERE: you can only update the variables that
-	control
-	how everything will be drawn later in display().
-	How much do we move or rotate things? Because we use a fixed frame
-	rate, we
-	assume there's always FRAME_TIME milliseconds between drawing each
-	frame. So,
-	every time think() is called, we need to work out how far things should
-	have
-	moved, rotated, or otherwise changed in that period of time.
-	Movement example:
-	* Let's assume a distance of 1.0 GL units is 1 metre.
-	* Let's assume we want something to move 2 metres per second on the x
-	axis
-	* Each frame, we'd need to update its position like this:
-	x += 2 * (FRAME_TIME / 1000.0f)
-	* Note that we have to convert FRAME_TIME to seconds. We can skip this
-	by
-	using a constant defined earlier in this template:
-	x += 2 * FRAME_TIME_SEC;
-	Rotation example:
-	* Let's assume we want something to do one complete 360-degree rotation
-	every
-	second (i.e. 60 Revolutions Per Minute, or RPM).
-	* Each frame, we'd need to update our object's angle like this (we'll
-	use the
-	FRAME_TIME_SEC constant as per the example above):
-	a += 360 * FRAME_TIME_SEC;
-	This works for any type of "per second" change: just multiply the
-	amount you'd
-	want to move in a full second by FRAME_TIME_SEC, and add or subtract
-	that
-	from whatever variable you're updating.
-	You can use this same approach to animate other things like color,
-	opacity,
-	brightness of lights, etc.
-	*/
-	/*
-	Keyboard motion handler: complete this section to make your "player-
-	controlled"
-	object respond to keyboard input.
-	*/
+	
 	if (keyboardMotion.Yaw != MOTION_NONE) {
 		/* TEMPLATE: Turn your object right (clockwise) if .Yaw < 0, or left
 		(anticlockwise) if .Yaw > 0 */
@@ -474,14 +434,7 @@ void think(void)
 		*/
 	}
 }
-/*
-Initialise OpenGL lighting before we begin the render loop.
-Note (advanced): If you're using dynamic lighting (e.g. lights that move
-around, turn on or
-off, or change colour) you may want to replace this with a drawLights
-function that gets called
-at the beginning of display() instead of init().
-*/
+
 void initLights(void)
 {
 	// Simple lighting setup
