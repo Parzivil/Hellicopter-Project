@@ -134,17 +134,17 @@ int GLUE_RAND_MIN_MAX(int minVal, int maxVal) {
 }
 
 //Redraw the particle
-void GLUE_DrawParticle(struct Particle* p) {
+void GLUE_DrawParticle(struct Particle_2D* p) {
 	GLUE_CIRCLE(p->location, p->size, p->colour);
 }
 
 //Move the particle acoording to its velocity
-void GLUE_MoveParticle(struct Particle* p) {
+void GLUE_MoveParticle(struct Particle_2D* p) {
 	p->location.x -= p->velocity.vx;
 	p->location.y -= p->velocity.vy;
 }
 
-void GLUE_AddParticle(struct Particle p) {
+void GLUE_AddParticle(struct Particle_2D p) {
 	int hash = p.id % MAX_PARTICLES; //Use a hash function to set its array location
 	GLUE_Particles[hash] = p;
 }
@@ -157,7 +157,7 @@ void GLUE_MakeParticle(struct Location location,
 	int id) {
 
 	//Create a new particle
-	struct Particle p = { location, colour, velocity,size, state, id };
+	struct Particle_2D p = { location, colour, velocity,size, state, id };
 
 	int hash = p.id % MAX_PARTICLES; //Use a hash function to set its array location
 	GLUE_Particles[hash] = p; //Set the array position depending on hash location
@@ -236,8 +236,8 @@ int getParticleCount(int screenHeight) {
 	return count;
 }
 
-MeshOBJ* loadMeshObject(char* fileName) {
-	vec3d vertSum = {0, 0, 0};
+MeshOBJ* GLUE_loadMeshObject(char* fileName) {
+	Vector3D vertSum = {0, 0, 0};
 	FILE* inFile = NULL;
 	MeshOBJ* object;
 	char line[512];					// Line currently being parsed 
@@ -283,9 +283,9 @@ MeshOBJ* loadMeshObject(char* fileName) {
 		}
 	}
 
-	if (object->vertexCount > 0)object->vertices = malloc(sizeof(vec3d) * object->vertexCount);
-	if (object->texCoordCount > 0) object->texCoords = malloc(sizeof(vec2d) * object->texCoordCount);
-	if (object->normalCount > 0) object->normals = malloc(sizeof(vec3d) * object->normalCount);
+	if (object->vertexCount > 0)object->vertices = malloc(sizeof(Vector3D) * object->vertexCount);
+	if (object->texCoordCount > 0) object->texCoords = malloc(sizeof(Vector2D) * object->texCoordCount);
+	if (object->normalCount > 0) object->normals = malloc(sizeof(Vector3D) * object->normalCount);
 	if (object->faceCount > 0) object->faces = malloc(sizeof(meshObjectFace) * object->faceCount);
 
 	// Parse the file again, reading the actual vertices, texture coordinates, normals, and faces.
@@ -295,24 +295,24 @@ MeshOBJ* loadMeshObject(char* fileName) {
 	{
 		if (sscanf_s(line, "%9s", keyword, (unsigned)_countof(keyword)) == 1) {
 			if (strcmp(keyword, "v") == 0) {
-				vec3d vertex = { 0, 0, 0 };
+				Vector3D vertex = { 0, 0, 0 };
 				sscanf_s(line, "%*s %f %f %f", &vertex.x, &vertex.y, &vertex.z);
-				memcpy_s(&object->vertices[currentVertexIndex], sizeof(vec3d), &vertex, sizeof(vec3d));
+				memcpy_s(&object->vertices[currentVertexIndex], sizeof(Vector3D), &vertex, sizeof(Vector3D));
 				vertSum.x += vertex.x;
 				vertSum.y += vertex.y;
 				vertSum.z += vertex.z;
 				currentVertexIndex++;
 			}
 			else if (strcmp(keyword, "vt") == 0) {
-				vec2d texCoord = { 0, 0 };
+				Vector2D texCoord = { 0, 0 };
 				sscanf_s(line, "%*s %f %f", &texCoord.x, &texCoord.y);
-				memcpy_s(&object->texCoords[currentTexCoordIndex], sizeof(vec2d), &texCoord, sizeof(vec2d));
+				memcpy_s(&object->texCoords[currentTexCoordIndex], sizeof(Vector2D), &texCoord, sizeof(Vector2D));
 				currentTexCoordIndex++;
 			}
 			else if (strcmp(keyword, "vn") == 0) {
-				vec3d normal = { 0, 0, 0 };
+				Vector3D normal = { 0, 0, 0 };
 				sscanf_s(line, "%*s %f %f %f", &normal.x, &normal.y, &normal.z);
-				memcpy_s(&object->normals[currentNormalIndex], sizeof(vec3d), &normal, sizeof(vec3d));
+				memcpy_s(&object->normals[currentNormalIndex], sizeof(Vector3D), &normal, sizeof(Vector3D));
 				currentNormalIndex++;
 			}
 			else if (strcmp(keyword, "f") == 0) {
@@ -324,52 +324,15 @@ MeshOBJ* loadMeshObject(char* fileName) {
 
 	fclose(inFile);
 
-	vec3d centerPoint = { vertSum.x / object->vertexCount,
+	Vector3D centerPoint = { vertSum.x / object->vertexCount,
 						vertSum.y / object->vertexCount,
 						vertSum.z / object->vertexCount };
-	vec3d zero = { -1 * centerPoint.x, -1 * centerPoint.y, -1 * centerPoint.z };
+	Vector3D zero = { -1 * centerPoint.x, -1 * centerPoint.y, -1 * centerPoint.z };
 	object->offset = &zero;
 
 	return object;
 }
 
-/*
-	Render the faces of the specified Mesh Object in OpenGL.
-*/
-void renderMeshObject(MeshOBJ* object) {
-	//Itterate through the faces
-	for (int faceNo = 0; faceNo < object->faceCount; faceNo++) {
-		meshObjectFace face = object->faces[faceNo]; //Select one face
-
-		//Ensure there are enough faces to draw a closed shape
-		if (face.pointCount >= 3) {
-			glBegin(GL_POLYGON);
-
-			for (int pointNo = 0; pointNo < face.pointCount; pointNo++) {
-				meshObjectFacePoint point = face.points[pointNo];
-
-				if (point.normalIndex >= 0) {
-					vec3d normal = object->normals[point.normalIndex];
-					glNormal3d((normal.x * object->scale->x) + object->offset->x, 
-								(normal.y * object->scale->y) + object->offset->y,
-								(normal.z * object->scale->z) + object->offset->z);
-				}
-
-				if (point.texCoordIndex >= 0) {
-					vec2d texCoord = object->texCoords[point.texCoordIndex];
-					glTexCoord2d(texCoord.x, texCoord.y);
-				}
-
-				vec3d vertex = object->vertices[point.vertexIndex];
-				glVertex3f((vertex.x * object->scale->x) + object->offset->x,
-							(vertex.y * object->scale->y) + object->offset->y,
-							(vertex.z * object->scale->z) + object->offset->z);
-			}
-
-			glEnd();
-		}
-	}
-}
 
 /*
 	Initialise the specified Mesh Object Face from a string of face data in the Wavefront OBJ file format.
@@ -411,6 +374,7 @@ void initMeshObjectFace(meshObjectFace* face, char* faceData, int maxFaceDataLen
 			meshObjectFacePoint parsedPoint = { 0, 0, 0 }; // At this point we're working with 1-based indices from the OBJ file.
 
 			if (strcmp(token, "f") != 0) {
+
 				// Attempt to parse this face point in the format "v/t[/n]" (vertex, texture, and optional normal).
 				if (sscanf_s(token, "%d/%d/%d", &parsedPoint.vertexIndex, &parsedPoint.texCoordIndex, &parsedPoint.normalIndex) < 2) {
 					// That didn't work out: try parsing in the format "v[//n]" instead (vertex, no texture, and optional normal).
@@ -450,6 +414,57 @@ void initMeshObjectFace(meshObjectFace* face, char* faceData, int maxFaceDataLen
 }
 
 /*
+	Render the faces of the specified Mesh Object in OpenGL.
+*/
+void GLUE_renderMeshObject(MeshOBJ* object) {
+
+	glDisable(GL_TEXTURE_2D);
+	glColor4f(1, 1, 1, 0);
+	// Set up model transformations
+	glPushMatrix();
+
+	// Apply scale
+	if (object->scale != NULL) {
+		glScalef(object->scale->x, object->scale->y, object->scale->z);
+	}
+
+	// Apply translation (offset)
+	if (object->offset != NULL) {
+		glTranslatef(object->offset->x, object->offset->y, object->offset->z);
+	}
+
+	//Itterate through the faces
+	for (int faceNo = 0; faceNo < object->faceCount; faceNo++) {
+		meshObjectFace face = object->faces[faceNo]; //Select one face
+
+		//Ensure there are enough faces to draw a closed shape
+		if (face.pointCount >= 3) {
+			glBegin(GL_POLYGON);
+
+			for (int pointNo = 0; pointNo < face.pointCount; pointNo++) {
+				meshObjectFacePoint point = face.points[pointNo];
+
+				if (point.normalIndex >= 0) {
+					Vector3D normal = object->normals[point.normalIndex];
+					glNormal3d(normal.x, normal.y, normal.z);
+				}
+
+				if (point.texCoordIndex >= 0) {
+					Vector2D texCoord = object->texCoords[point.texCoordIndex];
+					glTexCoord2d(texCoord.x, texCoord.y);
+				}
+
+				Vector3D vertex = object->vertices[point.vertexIndex];
+				glVertex3f(vertex.x, vertex.y, vertex.z);
+			}
+
+			glEnd();
+		}
+	}
+	glPopMatrix();
+}
+
+/*
 	Free the specified Mesh Object, including all of its vertices, texture coordinates, normals, and faces.
 */
 void freeMeshObject(MeshOBJ* object)
@@ -471,138 +486,58 @@ void freeMeshObject(MeshOBJ* object)
 	}
 }
 
-/******************************************************************************
- * PPM Object Loader Implementation
- * Load a binary ppm file into an OpenGL texture and return the OpenGL texture reference ID
- ******************************************************************************/
-
-int loadPPM(char* filename)
+//I AM SO LOST WHAT THIS DOES
+void loadPPM()
 {
-	FILE* inFile = NULL; //File pointer
-	int width, height, maxVal; //image metadata from PPM file format
-	int totalPixels; // total number of pixels in the image
-
-	// temporary character
-	char tempChar;
-	// counter variable for the current pixel in the image
-	int i;
-
-	char header[100]; //input buffer for reading in the file header information
-
-	// if the original values are larger than 255
-	float RGBScaling;
-
-	// temporary variables for reading in the red, green and blue data of each pixel
-	int red, green, blue;
-
-	GLubyte* texture; //the texture buffer pointer
-
-	//create one texture with the next available index
-	GLuint textureID;
-	glGenTextures(1, &textureID);
-
-	errno_t err = fopen_s(&inFile, filename, "r");
-	
-	if (err != 0) return NULL;
-
-	// read in the first header line
-	//    - "%[^\n]"  matches a string of all characters not equal to the new line character ('\n')
-	//    - so we are just reading everything up to the first line break
-	fscanf_s(inFile, "%[^\n] ", header, (unsigned)_countof(header));
-
-	// make sure that the image begins with 'P6', which signifies a PPM file
-	if ((header[0] != 'P') || (header[1] != '3'))
-	{
-		printf("This is not a PPM file!\n");
-		exit(0);
-	}
-
-	// we have a PPM file
-	printf("This is a PPM file\n");
-
-	// read in the first character of the next line
-	fscanf_s(inFile, "%c", &tempChar, 1);
-
-	// while we still have comment lines (which begin with #)
-	while (tempChar == '#')
-	{
-		// read in the comment
-		fscanf_s(inFile, "%[^\n] ", header, (unsigned)_countof(header));
-
-		// print the comment
-		printf("%s\n", header);
-
-		// read in the first character of the next line
-		fscanf_s(inFile, "%c", &tempChar, 1);
-	}
-
-	// the last one was not a comment character '#', so we need to put it back into the file stream (undo)
-	ungetc(tempChar, inFile);
-
-	// read in the image hieght, width and the maximum value
-	fscanf_s(inFile, "%d %d %d", &width, &height, &maxVal);
-	// print out the information about the image file
-	printf("%d rows  %d columns  max value= %d\n", height, width, maxVal);
-
-	// compute the total number of pixels in the image
-	totalPixels = width * height;
-
-	// allocate enough memory for the image  (3*) because of the RGB data
-	texture = malloc(3 * sizeof(GLuint) * totalPixels);
-
-	// determine the scaling for RGB values
-	RGBScaling = 255.0f / maxVal;
-
-	// if the maxValue is 255 then we do not need to scale the 
-	//    image data values to be in the range or 0 to 255
-	if (maxVal == 255)
-	{
-		for (i = 0; i < totalPixels; i++)
-		{
-			// read in the current pixel from the file
-			fscanf_s(inFile, "%d %d %d", &red, &green, &blue);
-
-			// store the red, green and blue data of the current pixel in the data array
-			texture[3 * totalPixels - 3 * i - 3] = red;
-			texture[3 * totalPixels - 3 * i - 2] = green;
-			texture[3 * totalPixels - 3 * i - 1] = blue;
-		}
-	}
-	else  // need to scale up the data values
-	{
-		for (i = 0; i < totalPixels; i++)
-		{
-			// read in the current pixel from the file
-			fscanf_s(inFile, "%d %d %d", &red, &green, &blue);
-
-			// store the red, green and blue data of the current pixel in the data array
-			texture[3 * totalPixels - 3 * i - 3] = (GLubyte)(red * RGBScaling);
-			texture[3 * totalPixels - 3 * i - 2] = (GLubyte)(green * RGBScaling);
-			texture[3 * totalPixels - 3 * i - 1] = (GLubyte)(blue * RGBScaling);
-		}
-	}
-
-
-	fclose(inFile);
-
-	glBindTexture(GL_TEXTURE_2D, textureID);
-
 
 	//Set the texture parameters
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR_MIPMAP_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+}
 
-
-	//Create mipmaps
-	gluBuild2DMipmaps(GL_TEXTURE_2D, 4, (GLuint)width, (GLuint)height, GL_RGB, GL_UNSIGNED_BYTE, texture);
-
-	//openGL guarantees to have the texture data stored so we no longer need it
-	free(texture);
-
-	//return the current texture id
-	return(textureID);
+void GLUE_LookAt(struct Camera camera)
+{
+	gluLookAt(camera.eye.x, camera.eye.y, camera.eye.z,
+		camera.center.x, camera.center.y, camera.center.z,
+		camera.up.x, camera.up.y, camera.up.z);
 }
 
 
+void computeBoundingBox(MeshOBJ* object, Vector3D* min, Vector3D* max) {
+	//if (object == NULL || object->vertices == NULL) return;
+
+	min->x = min->y = min->z = 0xFFFFFF;
+	max->x = max->y = max->z = -0xFFFFFF;
+
+	for (int i = 0; i < object->vertexCount; i++) {
+		Vector3D* v = &object->vertices[i];
+		if (v->x < min->x) min->x = v->x;
+		if (v->y < min->y) min->y = v->y;
+		if (v->z < min->z) min->z = v->z;
+		if (v->x > max->x) max->x = v->x;
+		if (v->y > max->y) max->y = v->y;
+		if (v->z > max->z) max->z = v->z;
+	}
+
+	printf("Min: %d, %d, %d\n", min->x, min->y, min->z);
+	printf("Max: %d, %d, %d\n", max->x, max->y, max->z);
+}
+
+void drawBox(Vector3D* min, Vector3D* max) {
+	glBegin(GL_LINES);
+	glColor3b(1, 0.5, 0);
+
+	glVertex3f(min->x, min->y, min->z);
+	glVertex3f(min->x, min->y, max->z);
+
+	glVertex3f(min->x, min->y, min->z);
+	glVertex3f(min->x, max->y, min->z);
+
+	glVertex3f(min->x, min->y, min->z);
+	glVertex3f(max->x, min->y, min->z);
+
+	glEnd();
+	
+}

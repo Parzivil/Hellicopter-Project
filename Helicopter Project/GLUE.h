@@ -42,21 +42,21 @@
 /// <summary>
 /// Pass colours more easily
 /// </summary>
-struct Colour {
+typedef struct Colour {
 	float r;
 	float g;
 	float b;
 	float a;
-};
+} Colour;
 
 /// <summary>
 /// Stores x and y positions
 /// </summary>
-struct Location {
+typedef struct Location {
 	float x;
 	float y;
 	float z;
-};
+}Location;
 
 /// <summary>
 /// Velocity
@@ -81,7 +81,7 @@ struct Point {
 	struct Colour colour;
 };
 
-struct Particle {
+struct Particle_2D {
 	struct Location location;
 	struct Colour colour;
 	struct Velocity velocity;
@@ -90,16 +90,38 @@ struct Particle {
 	int id;
 };
 
-typedef struct {
-	GLfloat x;
-	GLfloat y;
-	GLfloat z;
-} vec3d;
+typedef struct DiffuseMaterial {
+	struct Colour colour;
+	float roughness;
+} DiffuseMaterial;
 
 typedef struct {
-	GLfloat x;
-	GLfloat y;
-} vec2d;
+	struct Colour colour;
+	float roughness;
+} PhongMaterial;
+
+
+typedef struct {
+	GLenum light;
+	Location Location;
+	Colour globalColour;
+	Colour ambientColour;
+	Colour diffuseColour;
+	Colour specularColour;
+} Light;
+
+
+
+typedef struct {
+	GLdouble x;
+	GLdouble y;
+	GLdouble z;
+} Vector3D;
+
+typedef struct {
+	GLdouble x;
+	GLdouble y;
+} Vector2D;
 
 typedef struct {
 	int vertexIndex;	// Index of this vertex in the object's vertices array
@@ -114,19 +136,29 @@ typedef struct {
 
 typedef struct {
 	int vertexCount;
-	vec3d* vertices;
+	Vector3D* vertices;
 	int texCoordCount;
-	vec2d* texCoords;
+	Vector2D* texCoords;
 	int normalCount;
-	vec3d* normals;
+	Vector3D* normals;
 	int faceCount;
 	meshObjectFace* faces;
-	vec3d* scale;
-	vec3d* rotation;
-	vec3d* offset;
+	Vector3D* scale;
+	Vector3D* rotation;
+	Vector3D* offset;
 } MeshOBJ;
 
+struct Camera {
+	Vector3D eye;
+	Vector3D center;
+	Vector3D up;
+};
 
+
+struct BoundingBox {
+	Vector3D min;
+	Vector3D max;
+};
 
 /// <summary>
 /// Tints the "shadows" to a set colour (lower value mean more of that colour)
@@ -136,7 +168,7 @@ struct Colour FallOffMultiplyer;
 /// <summary>
 /// Collection of particles
 /// </summary>
-struct Particle GLUE_Particles[MAX_PARTICLES];
+struct Particle_2D GLUE_Particles[MAX_PARTICLES];
 
 /// <summary>
 /// Draws a circle with a gradient to simulate 3D
@@ -150,13 +182,13 @@ void GLUE_CIRCLE(struct Location l, int r, struct Colour c);
 /// Draws a particle to the screen
 /// </summary>
 /// <param name=""></param>
-void GLUE_DrawParticle(struct Particle* p);
+void GLUE_DrawParticle(struct Particle_2D* p);
 
 /// <summary>
 /// Updates the particles position based on its velocity
 /// </summary>
 /// <param name="p"></param>
-void GLUE_MoveParticle(struct Particle* p);
+void GLUE_MoveParticle(struct Particle_2D* p);
 
 /// <summary>
 /// Returns a point between two locations
@@ -237,7 +269,7 @@ int GLUE_RAND(int randMax);
 /// <summary>
 /// Adds a particle to the particle array
 /// </summary>
-void GLUE_AddParticle(struct Particle p);
+void GLUE_AddParticle(struct Particle_2D p);
 
 /// <summary>
 /// Returns a new location which has been moved by an offset factor (x,y)
@@ -276,13 +308,13 @@ int getParticleCount(int screenHeight);
 /// </summary>
 /// <param name="fileName"></param>
 /// <returns></returns>
-MeshOBJ* loadMeshObject(char* fileName);
+MeshOBJ* GLUE_loadMeshObject(char* fileName);
 
 /// <summary>
 /// Displays the mesh object
 /// </summary>
 /// <param name="object"></param>
-void renderMeshObject(MeshOBJ* object);
+void GLUE_renderMeshObject(MeshOBJ* object);
 
 /// <summary>
 /// Creates a mesh object face
@@ -299,4 +331,9 @@ void initMeshObjectFace(meshObjectFace* face, char* faceData, int faceDataLength
 void freeMeshObject(MeshOBJ* object);
 
 
-int loadPPM(char* filename);
+void loadPPM();
+
+void GLUE_LookAt(struct Camera camera);
+
+void computeBoundingBox(MeshOBJ* object, Vector3D* min, Vector3D* max);
+void drawBox(Vector3D* min, Vector3D* max);

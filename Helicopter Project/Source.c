@@ -39,6 +39,9 @@ unsigned int frameStartTime = 0;
 #define MOTION_RIGHT 1 // Rightward motion.
 #define MOTION_DOWN -1 // Downward motion.
 #define MOTION_UP 1 // Upward motion.
+
+
+
 // Represents the motion of an object on four axes (Yaw, Surge, Sway, and Heave).
 //
 // You can use any numeric values, as specified in the comments for each axis. However,
@@ -118,13 +121,17 @@ void initLights(void);
 // Render objects as filled polygons (1) or wireframes (0). Default filled.
 int renderFillEnabled = 1;
 MeshOBJ* cubeMesh;
-GLuint spotsTexture;
-GLfloat cameraPosition[] = { 4, 4, 2 };
+
+struct Camera camera = { { 4, 4, 2 } , { 0, 0, 0 } , { 0, 1, 0 } };
 
 GLint windowWidth = 800;
 GLint windowHeight = 400;
 
-vec3d offset = { 0, 0, -1 };
+Vector3D offset = { 0, 0, -2 };
+
+Vector3D min;
+Vector3D max;
+
 
 
 /******************************************************************************
@@ -143,6 +150,7 @@ void main(int argc, char** argv)
 
 	// Set up the scene.
 	init();
+
 
 	// Disable key repeat (keyPressed or specialKeyPressed will only be called once when a key is first pressed).
 	glutSetKeyRepeat(GLUT_KEY_REPEAT_OFF);
@@ -175,16 +183,14 @@ void display(void)
 	// load the identity matrix into the model view matrix
 	glLoadIdentity();
 
-	// set the camera position so we can "see" the cube drawn at (0,0,0)
-	gluLookAt(cameraPosition[0], cameraPosition[1], cameraPosition[2],
-		0, 0, 0,
-		0, 1, 0);
+	GLUE_LookAt(camera);
 
 	glColor3f(1.0f, 1.0f, 1.0f);
 
 	glEnable(GL_COLOR_MATERIAL);
 
-	//renderMeshObject(cubeMesh); //untextured
+	GLUE_renderMeshObject(cubeMesh); //untextured
+	computeBoundingBox(&cubeMesh, &min, &max);
 
 	glColor3f(0.0f, 1.0f, 1.0f);
 	glutWireSphere(0.5, 10, 10);
@@ -207,13 +213,8 @@ void display(void)
 
 	glEnd();
 
-	//textured object
-	glColor3f(1.0f, 1.0f, 1.0f); //base color is light pink
-	glEnable(GL_TEXTURE_2D);
-	glBindTexture(GL_TEXTURE_2D, spotsTexture);
-	renderMeshObject(cubeMesh);
-	glDisable(GL_TEXTURE_2D);
-	glDisable(GL_COLOR_MATERIAL);
+
+	drawBox(&min, &max);
 
 	// swap the drawing buffers
 	glutSwapBuffers();
@@ -254,28 +255,20 @@ void keyPressed(unsigned char key, int x, int y)
 			motionKeyStates.MoveForward = KEYSTATE_DOWN;
 			keyboardMotion.Surge = MOTION_FORWARD;
 
-			offset.z -= 0.1;
-			cubeMesh->offset = &offset;
 			break;
 		case KEY_MOVE_BACKWARD:
 			motionKeyStates.MoveBackward = KEYSTATE_DOWN;
 			keyboardMotion.Surge = MOTION_BACKWARD;
 
-			offset.z += 0.1;
-			cubeMesh->offset = &offset;
 			break;
 		case KEY_MOVE_LEFT:
 			motionKeyStates.MoveLeft = KEYSTATE_DOWN;
 			keyboardMotion.Sway = MOTION_LEFT;
 
-			offset.x -= 0.1;
-			cubeMesh->offset = &offset;
 			break;
 		case KEY_MOVE_RIGHT:
 			motionKeyStates.MoveRight = KEYSTATE_DOWN;
 			keyboardMotion.Sway = MOTION_RIGHT;
-			offset.x += 0.1;
-			cubeMesh->offset = &offset;
 			break;
 
 		case KEY_RENDER_FILL:
@@ -405,13 +398,14 @@ void init(void)
 	initLights();
 	
 	//load assets
-	cubeMesh = loadMeshObject("pumpkin.obj");
-	vec3d scale = { 0.05, 0.05, 0.05 };
+	cubeMesh = GLUE_loadMeshObject("pumpkin.obj");
+	Vector3D scale = { 0.05, 0.05, 0.05 };
 	cubeMesh->scale = &scale;
-	//vec3d offset = { -1, 0, 11 };
-	//cubeMesh->offset = &offset;
 
-	spotsTexture = loadPPM("spots.ppm");
+	cubeMesh->offset = &offset;
+
+	loadPPM();
+
 }
 
 void think(void)
@@ -424,14 +418,20 @@ void think(void)
 	if (keyboardMotion.Surge != MOTION_NONE) {
 		/* TEMPLATE: Move your object backward if .Surge < 0, or forward
 		if .Surge > 0 */
+		offset.x += keyboardMotion.Surge;
+		cubeMesh->offset = &offset;
 	}
 	if (keyboardMotion.Sway != MOTION_NONE) {
 		/* TEMPLATE: Move (strafe) your object left if .Sway < 0, or right
 		if .Sway > 0 */
+		offset.z += keyboardMotion.Sway;
+		cubeMesh->offset = &offset;
 	}
 	if (keyboardMotion.Heave != MOTION_NONE) {
-		/* TEMPLATE: Move your object down if .Heave < 0, or up if .Heave > 0
+		/* TEMPLATE: Move your object down if .Heav e < 0, or up if .Heave > 0
 		*/
+		offset.y += keyboardMotion.Heave;
+		cubeMesh->offset = &offset;
 	}
 }
 
