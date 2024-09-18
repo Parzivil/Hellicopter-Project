@@ -133,6 +133,8 @@ Vector3D min;
 Vector3D max;
 
 
+GLUE_Material blueMaterial = { { 0.0, 0.0, 0.0, 1.0},{0.1f, 0.5f, 0.8f, 1.0f},{ 0.0, 0.0, 0.0, 1.0},0 };
+
 
 /******************************************************************************
 * Entry Point (don't put anything except the main function here)
@@ -182,8 +184,6 @@ void display(void)
 
 	// load the identity matrix into the model view matrix
 	glLoadIdentity();
-
-	GLUE_LookAt(camera);
 
 	glColor3f(1.0f, 1.0f, 1.0f);
 
@@ -399,6 +399,7 @@ void init(void)
 	
 	//load assets
 	cubeMesh = GLUE_loadMeshObject("pumpkin.obj");
+	cubeMesh->material = blueMaterial;
 	Vector3D scale = { 0.05, 0.05, 0.05 };
 	cubeMesh->scale = &scale;
 
@@ -410,7 +411,6 @@ void init(void)
 
 void think(void)
 {
-	
 	if (keyboardMotion.Yaw != MOTION_NONE) {
 		/* TEMPLATE: Turn your object right (clockwise) if .Yaw < 0, or left
 		(anticlockwise) if .Yaw > 0 */
@@ -455,6 +455,9 @@ void initLights(void)
 	glEnable(GL_LIGHT0);
 	// Make GL normalize the normal vectors we supply.
 	glEnable(GL_NORMALIZE);
+
+	// Turn on depth testing so that polygons are drawn in the correct order
+	glEnable(GL_DEPTH_TEST);
 	// Enable use of simple GL colours as materials.
 	glEnable(GL_COLOR_MATERIAL);
 }

@@ -49,6 +49,19 @@ typedef struct Colour {
 	float a;
 } Colour;
 
+typedef struct GLUE_Colour {
+	GLfloat R;
+	GLfloat G;
+	GLfloat B;
+	GLfloat A;
+} GLUE_Colour;
+
+typedef struct GLUE_Position {
+	GLfloat X;
+	GLfloat Y;
+	GLfloat Z;
+} GLUE_Position;
+
 /// <summary>
 /// Stores x and y positions
 /// </summary>
@@ -76,6 +89,12 @@ enum OBJ_Line {
 	VERTEX, FACE
 };
 
+typedef struct Vector3D {
+	GLdouble x;
+	GLdouble y;
+	GLdouble z;
+} Vector3D;
+
 struct Point {
 	struct Location location;
 	struct Colour colour;
@@ -101,24 +120,31 @@ typedef struct {
 } PhongMaterial;
 
 
-typedef struct {
-	GLenum light;
-	Location Location;
-	Colour globalColour;
-	Colour ambientColour;
-	Colour diffuseColour;
-	Colour specularColour;
+typedef struct GLUE_Camera {
+	GLUE_Position Position;
+	GLUE_Position LookAt;
+	Vector3D Rotation;
+} GLUE_Camera;
+
+typedef struct GLUE_Material {
+	GLUE_Colour AmbientColour;
+	GLUE_Colour DiffuseColour;
+	GLUE_Colour SpecularColour;
+	GLfloat Shininess;
+} GLUE_Material;
+
+typedef struct GLUE_Light{
+	GLUE_Position Position;
+	GLUE_Colour globalColour;
+	GLUE_Colour ambientColour;
+	GLUE_Colour diffuseColour;
+	GLUE_Colour specularColour;
 } Light;
 
 
 
-typedef struct {
-	GLdouble x;
-	GLdouble y;
-	GLdouble z;
-} Vector3D;
 
-typedef struct {
+typedef struct Vector2D{
 	GLdouble x;
 	GLdouble y;
 } Vector2D;
@@ -134,18 +160,21 @@ typedef struct {
 	meshObjectFacePoint* points;
 } meshObjectFace;
 
-typedef struct {
-	int vertexCount;
+typedef struct MeshOBJ {
+	GLUE_Material material;
 	Vector3D* vertices;
-	int texCoordCount;
-	Vector2D* texCoords;
-	int normalCount;
 	Vector3D* normals;
-	int faceCount;
 	meshObjectFace* faces;
+
+	Vector2D* texCoords;
+
 	Vector3D* scale;
 	Vector3D* rotation;
 	Vector3D* offset;
+	unsigned int normalCount;
+	unsigned int faceCount;
+	unsigned int texCoordCount;
+	unsigned int vertexCount;
 } MeshOBJ;
 
 struct Camera {
@@ -332,8 +361,6 @@ void freeMeshObject(MeshOBJ* object);
 
 
 void loadPPM();
-
-void GLUE_LookAt(struct Camera camera);
 
 void computeBoundingBox(MeshOBJ* object, Vector3D* min, Vector3D* max);
 void drawBox(Vector3D* min, Vector3D* max);

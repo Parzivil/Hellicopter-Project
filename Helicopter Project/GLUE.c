@@ -418,8 +418,11 @@ void initMeshObjectFace(meshObjectFace* face, char* faceData, int maxFaceDataLen
 */
 void GLUE_renderMeshObject(MeshOBJ* object) {
 
-	glDisable(GL_TEXTURE_2D);
-	glColor4f(1, 1, 1, 0);
+	GLfloat ambient[] = { object->material.AmbientColour.R, object->material.AmbientColour.G, object->material.AmbientColour.B, object->material.AmbientColour.A };
+	glMaterialfv(GL_FRONT, GL_AMBIENT, ambient);
+	glMaterialfv(GL_FRONT, GL_DIFFUSE, &object->material.DiffuseColour);
+	glMaterialfv(GL_FRONT, GL_SPECULAR, &object->material.SpecularColour);
+	glMaterialf(GL_FRONT, GL_SHININESS, object->material.Shininess);
 	// Set up model transformations
 	glPushMatrix();
 
@@ -497,14 +500,6 @@ void loadPPM()
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 }
 
-void GLUE_LookAt(struct Camera camera)
-{
-	gluLookAt(camera.eye.x, camera.eye.y, camera.eye.z,
-		camera.center.x, camera.center.y, camera.center.z,
-		camera.up.x, camera.up.y, camera.up.z);
-}
-
-
 void computeBoundingBox(MeshOBJ* object, Vector3D* min, Vector3D* max) {
 	//if (object == NULL || object->vertices == NULL) return;
 
@@ -539,5 +534,4 @@ void drawBox(Vector3D* min, Vector3D* max) {
 	glVertex3f(max->x, min->y, min->z);
 
 	glEnd();
-	
 }
