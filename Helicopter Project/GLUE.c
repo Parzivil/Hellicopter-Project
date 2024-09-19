@@ -240,7 +240,7 @@ MeshOBJ* GLUE_loadMeshObject(char* fileName) {
 	Vector3D vertSum = {0, 0, 0};
 	FILE* inFile = NULL;
 	MeshOBJ* object;
-	char line[512];					// Line currently being parsed 
+	char line[512];					// Line currently being parsed
 	char keyword[10];				// Keyword currently being parsed
 	int currentVertexIndex = 0;		// 0-based index of the vertex currently being parsed
 	int currentTexCoordIndex = 0;	// 0-based index of the texure coordinate currently being parsed
@@ -302,6 +302,7 @@ MeshOBJ* GLUE_loadMeshObject(char* fileName) {
 				vertSum.y += vertex.y;
 				vertSum.z += vertex.z;
 				currentVertexIndex++;
+				printf("%i: %f, %f, %f\n", currentVertexIndex, vertex.x, vertex.y, vertex.z);
 			}
 			else if (strcmp(keyword, "vt") == 0) {
 				Vector2D texCoord = { 0, 0 };
@@ -328,7 +329,7 @@ MeshOBJ* GLUE_loadMeshObject(char* fileName) {
 						vertSum.y / object->vertexCount,
 						vertSum.z / object->vertexCount };
 	Vector3D zero = { -1 * centerPoint.x, -1 * centerPoint.y, -1 * centerPoint.z };
-	object->offset = &zero;
+	//object->offset = &zero;
 
 	return object;
 }
@@ -413,28 +414,64 @@ void initMeshObjectFace(meshObjectFace* face, char* faceData, int maxFaceDataLen
 	}
 }
 
+void renderMaterial(GLUE_Material* material) {
+	glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, material->AmbientColour);
+	glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, material->DiffuseColour);
+	glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, material->SpecularColour);
+	glMaterialf(GL_FRONT_AND_BACK, GL_SHININESS, material->Shininess);
+}
+
 /*
 	Render the faces of the specified Mesh Object in OpenGL.
 */
 void GLUE_renderMeshObject(MeshOBJ* object) {
 
-	GLfloat ambient[] = { object->material.AmbientColour.R, object->material.AmbientColour.G, object->material.AmbientColour.B, object->material.AmbientColour.A };
-	glMaterialfv(GL_FRONT, GL_AMBIENT, ambient);
-	glMaterialfv(GL_FRONT, GL_DIFFUSE, &object->material.DiffuseColour);
-	glMaterialfv(GL_FRONT, GL_SPECULAR, &object->material.SpecularColour);
-	glMaterialf(GL_FRONT, GL_SHININESS, object->material.Shininess);
+
+	GLfloat lightPosition[] = { 10.0, 10.0, 10.0, 1.0 };
+
+	// a material that is all zeros
+	GLfloat zeroMaterial[] = { 0.0, 0.0, 0.0, 1.0 };
+
+	// a red ambient material
+	GLfloat redAmbient[] = { 0.5, 0.0, 0.0, 1.0 };
+
+	// a blue diffuse material
+	GLfloat blueDiffuse[] = { 0.1f, 0.5f, 0.8f, 1.0f };
+
+	// a red diffuse material
+	GLfloat redDiffuse[] = { 1.0, 0.0, 0.0, 1.0 };
+
+	// a white specular material
+	GLfloat whiteSpecular[] = { 2.0, 2.0, 2.0, 1.0 };
+
+	// the degrees of shinnines (size of the specular highlight, bigger number means smaller highlight)
+	GLfloat noShininess = 0.0;
+	GLfloat highShininess = 100.0;
+
+	glMaterialfv(GL_FRONT, GL_AMBIENT, redAmbient);
+	glMaterialfv(GL_FRONT, GL_DIFFUSE, blueDiffuse); //whiteTranslucent);
+	glMaterialfv(GL_FRONT, GL_SPECULAR, whiteSpecular);
+	glMaterialf(GL_FRONT, GL_SHININESS, 50);
 	// Set up model transformations
 	glPushMatrix();
 
+	
 	// Apply scale
 	if (object->scale != NULL) {
-		glScalef(object->scale->x, object->scale->y, object->scale->z);
+		//glScalef(object->scale->x, object->scale->y, object->scale->z);
+		//glScalef(0.5, 0.5, 0.5);
 	}
 
 	// Apply translation (offset)
 	if (object->offset != NULL) {
-		glTranslatef(object->offset->x, object->offset->y, object->offset->z);
+		//glTranslatef(object->offset->x, object->offset->y, object->offset->z);
 	}
+
+	glScalef(0.5, 0.5, 0.5);
+	glTranslatef(0, 0, 0);
+
+
+	glRotatef(object->rotation->x, 1, 1, 0);
 
 	//Itterate through the faces
 	for (int faceNo = 0; faceNo < object->faceCount; faceNo++) {
@@ -447,6 +484,7 @@ void GLUE_renderMeshObject(MeshOBJ* object) {
 			for (int pointNo = 0; pointNo < face.pointCount; pointNo++) {
 				meshObjectFacePoint point = face.points[pointNo];
 
+				
 				if (point.normalIndex >= 0) {
 					Vector3D normal = object->normals[point.normalIndex];
 					glNormal3d(normal.x, normal.y, normal.z);
@@ -459,6 +497,7 @@ void GLUE_renderMeshObject(MeshOBJ* object) {
 
 				Vector3D vertex = object->vertices[point.vertexIndex];
 				glVertex3f(vertex.x, vertex.y, vertex.z);
+				
 			}
 
 			glEnd();
@@ -489,24 +528,13 @@ void freeMeshObject(MeshOBJ* object)
 	}
 }
 
-//I AM SO LOST WHAT THIS DOES
-void loadPPM()
-{
-
-	//Set the texture parameters
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-}
-
 void computeBoundingBox(MeshOBJ* object, Vector3D* min, Vector3D* max) {
 	//if (object == NULL || object->vertices == NULL) return;
 
 	min->x = min->y = min->z = 0xFFFFFF;
 	max->x = max->y = max->z = -0xFFFFFF;
 
-	for (int i = 0; i < object->vertexCount; i++) {
+	/*for (int i = 0; i < object->vertexCount; i++) {
 		Vector3D* v = &object->vertices[i];
 		if (v->x < min->x) min->x = v->x;
 		if (v->y < min->y) min->y = v->y;
@@ -514,7 +542,7 @@ void computeBoundingBox(MeshOBJ* object, Vector3D* min, Vector3D* max) {
 		if (v->x > max->x) max->x = v->x;
 		if (v->y > max->y) max->y = v->y;
 		if (v->z > max->z) max->z = v->z;
-	}
+	}*/
 
 	printf("Min: %d, %d, %d\n", min->x, min->y, min->z);
 	printf("Max: %d, %d, %d\n", max->x, max->y, max->z);

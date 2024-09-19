@@ -28,40 +28,42 @@ const float FRAME_TIME_SEC = (1000 / TARGET_FPS) / 1000.0f;
 // Time we started preparing the current frame (in milliseconds since GLUT was initialized).
 unsigned int frameStartTime = 0;
 /******************************************************************************
-* Some Simple Definitions of Motion
-******************************************************************************/
-#define MOTION_NONE 0 // No motion.
-#define MOTION_CLOCKWISE -1 // Clockwise rotation.
-#define MOTION_ANTICLOCKWISE 1 // Anticlockwise rotation.
-#define MOTION_BACKWARD -1 // Backward motion.
-#define MOTION_FORWARD 1 // Forward motion.
-#define MOTION_LEFT -1 // Leftward motion.
-#define MOTION_RIGHT 1 // Rightward motion.
-#define MOTION_DOWN -1 // Downward motion.
-#define MOTION_UP 1 // Upward motion.
+ * Some Simple Definitions of Motion
+ ******************************************************************************/
 
+#define MOTION_NONE 0				// No motion.
+#define MOTION_CLOCKWISE -1			// Clockwise rotation.
+#define MOTION_ANTICLOCKWISE 1		// Anticlockwise rotation.
+#define MOTION_BACKWARD -1			// Backward motion.
+#define MOTION_FORWARD 1			// Forward motion.
+#define MOTION_LEFT -1				// Leftward motion.
+#define MOTION_RIGHT 1				// Rightward motion.
+#define MOTION_DOWN -1				// Downward motion.
+#define MOTION_UP 1					// Upward motion.
 
-
-// Represents the motion of an object on four axes (Yaw, Surge, Sway, and Heave).
-//
-// You can use any numeric values, as specified in the comments for each axis. However,
-// the MOTION_ definitions offer an easy way to define a "unit" movement without using
-// magic numbers (e.g. instead of setting Surge = 1, you can set Surge = MOTION_FORWARD).
-//
+ // Represents the motion of an object on four axes (Yaw, Surge, Sway, and Heave).
+ // 
+ // You can use any numeric values, as specified in the comments for each axis. However,
+ // the MOTION_ definitions offer an easy way to define a "unit" movement without using
+ // magic numbers (e.g. instead of setting Surge = 1, you can set Surge = MOTION_FORWARD).
+ //
 typedef struct {
-	int Yaw; // Turn about the Z axis [<0 = Clockwise, 0 = Stop, >0 = Anticlockwise]
-	int Surge; // Move forward or back [<0 = Backward, 0 = Stop, >0 = Forward]
-	int Sway; // Move sideways (strafe) [<0 = Left, 0 = Stop, >0 = Right]
-	int Heave; // Move vertically [<0 = Down, 0 = Stop, >0 = Up]
+	int Yaw;		// Turn about the Z axis	[<0 = Clockwise, 0 = Stop, >0 = Anticlockwise]
+	int Surge;		// Move forward or back		[<0 = Backward,	0 = Stop, >0 = Forward]
+	int Sway;		// Move sideways (strafe)	[<0 = Left, 0 = Stop, >0 = Right]
+	int Heave;		// Move vertically			[<0 = Down, 0 = Stop, >0 = Up]
 } motionstate4_t;
+
 /******************************************************************************
-* Keyboard Input Handling Setup
-******************************************************************************/
-// Represents the state of a single keyboard key.Represents the state of a single keyboard key.
+ * Keyboard Input Handling Setup
+ ******************************************************************************/
+
+ // Represents the state of a single keyboard key.Represents the state of a single keyboard key.
 typedef enum {
-	KEYSTATE_UP = 0, // Key is not pressed.
-	KEYSTATE_DOWN // Key is pressed down.
+	KEYSTATE_UP = 0,	// Key is not pressed.
+	KEYSTATE_DOWN		// Key is pressed down.
 } keystate_t;
+
 // Represents the states of a set of keys used to control an object's motion.
 typedef struct {
 	keystate_t MoveForward;
@@ -73,30 +75,38 @@ typedef struct {
 	keystate_t TurnLeft;
 	keystate_t TurnRight;
 } motionkeys_t;
+
 // Current state of all keys used to control our "player-controlled" object's motion.
 motionkeys_t motionKeyStates = {
-KEYSTATE_UP, KEYSTATE_UP, KEYSTATE_UP, KEYSTATE_UP,
-KEYSTATE_UP, KEYSTATE_UP, KEYSTATE_UP, KEYSTATE_UP };
+	KEYSTATE_UP, KEYSTATE_UP, KEYSTATE_UP, KEYSTATE_UP,
+	KEYSTATE_UP, KEYSTATE_UP, KEYSTATE_UP, KEYSTATE_UP };
+
 // How our "player-controlled" object should currently be moving, solely based on keyboard input.
 //
 // Note: this may not represent the actual motion of our object, which could be subject to
 // other controls (e.g. mouse input) or other simulated forces (e.g. gravity).
-motionstate4_t keyboardMotion = { MOTION_NONE, MOTION_NONE, MOTION_NONE,
-MOTION_NONE };
+motionstate4_t keyboardMotion = { MOTION_NONE, MOTION_NONE, MOTION_NONE, MOTION_NONE };
+
 // Define all character keys used for input (add any new key definitions here).
 // Note: USE ONLY LOWERCASE CHARACTERS HERE. The keyboard handler provided converts all
 // characters typed by the user to lowercase, so the SHIFT key is ignored.
-#define KEY_MOVE_FORWARD 'w'
-#define KEY_MOVE_BACKWARD 's'
-#define KEY_MOVE_LEFT 'a'
-#define KEY_MOVE_RIGHT 'd'
-#define KEY_RENDER_FILL 'l'
-#define KEY_EXIT 27 // Escape key.
+
+#define KEY_MOVE_FORWARD	'w'
+#define KEY_MOVE_BACKWARD	's'
+#define KEY_MOVE_LEFT		'a'
+#define KEY_MOVE_RIGHT		'd'
+#define KEY_RENDER_FILL		'l'
+#define KEY_EXIT			27 // Escape key.
+
 // Define all GLUT special keys used for input (add any new key definitions here).
-#define SP_KEY_MOVE_UP GLUT_KEY_UP
-#define SP_KEY_MOVE_DOWN GLUT_KEY_DOWN
-#define SP_KEY_TURN_LEFT GLUT_KEY_LEFT
-#define SP_KEY_TURN_RIGHT GLUT_KEY_RIGHT
+
+#define SP_KEY_MOVE_UP		GLUT_KEY_UP
+#define SP_KEY_MOVE_DOWN	GLUT_KEY_DOWN
+#define SP_KEY_TURN_LEFT	GLUT_KEY_LEFT
+#define SP_KEY_TURN_RIGHT	GLUT_KEY_RIGHT
+
+
+
 /******************************************************************************
 * GLUT Callback Prototypes
 ******************************************************************************/
@@ -123,6 +133,7 @@ int renderFillEnabled = 1;
 MeshOBJ* cubeMesh;
 
 struct Camera camera = { { 4, 4, 2 } , { 0, 0, 0 } , { 0, 1, 0 } };
+GLdouble cameraf[] = {4, 4, 2 , 0, 0, 0 , 0, 1, 0};
 
 GLint windowWidth = 800;
 GLint windowHeight = 400;
@@ -132,9 +143,38 @@ Vector3D offset = { 0, 0, -2 };
 Vector3D min;
 Vector3D max;
 
+GLfloat AmbientColour[4] = { 0, 0, 0, 1 };
+GLfloat DiffuseColour[4] = { 0, 0, 1, 1 };
+GLfloat SpecularColour[4] = { 0, 0, 0, 1 };
+const GLfloat Shininess = 1;
 
-GLUE_Material blueMaterial = { { 0.0, 0.0, 0.0, 1.0},{0.1f, 0.5f, 0.8f, 1.0f},{ 0.0, 0.0, 0.0, 1.0},0 };
+GLUE_Material blueMaterial = { &AmbientColour, &DiffuseColour, &SpecularColour, 1 };
 
+int smoothOn = 0;
+
+//  position the light source 
+GLfloat lightPosition[] = { 10.0, 10.0, 10.0, 1.0 };
+
+// a material that is all zeros
+GLfloat zeroMaterial[] = { 0.0, 0.0, 0.0, 1.0 };
+
+// a red ambient material
+GLfloat redAmbient[] = { 0.5, 0.0, 0.0, 1.0 };
+
+// a blue diffuse material
+GLfloat blueDiffuse[] = { 0.1f, 0.5f, 0.8f, 1.0f };
+
+// a red diffuse material
+GLfloat redDiffuse[] = { 1.0, 0.0, 0.0, 1.0 };
+
+// a white specular material
+GLfloat whiteSpecular[] = { 1.0, 1.0, 1.0, 1.0 };
+
+GLfloat cameraPosition[] = { 0, 0, 7 };
+
+// the degrees of shinnines (size of the specular highlight, bigger number means smaller highlight)
+GLfloat noShininess = 0.0;
+GLfloat highShininess = 100.0;
 
 /******************************************************************************
 * Entry Point (don't put anything except the main function here)
@@ -148,11 +188,10 @@ void main(int argc, char** argv)
 	// set window position on screen
 	glutInitWindowPosition(100, 100);
 
-	glutCreateWindow("Animation");
+	glutCreateWindow("Helicopter");
 
 	// Set up the scene.
 	init();
-
 
 	// Disable key repeat (keyPressed or specialKeyPressed will only be called once when a key is first pressed).
 	glutSetKeyRepeat(GLUT_KEY_REPEAT_OFF);
@@ -179,42 +218,74 @@ void main(int argc, char** argv)
 
 void display(void)
 {
+	// sphere resolution
+	int resolution = 50;
+
+	if (smoothOn)
+		glShadeModel(GL_SMOOTH);
+	else
+		glShadeModel(GL_FLAT);
+
 	// clear the screen and depth buffer
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	// load the identity matrix into the model view matrix
 	glLoadIdentity();
 
-	glColor3f(1.0f, 1.0f, 1.0f);
+	// set the camera position so we can "see" the cube drawn at (0,0,0)
+	gluLookAt(cameraPosition[0], cameraPosition[1], cameraPosition[2],
+		0, 0, 0,
+		0, 1, 0);
 
-	glEnable(GL_COLOR_MATERIAL);
+	// position light 0
+	glLightfv(GL_LIGHT0, GL_POSITION, lightPosition);
 
-	GLUE_renderMeshObject(cubeMesh); //untextured
-	computeBoundingBox(&cubeMesh, &min, &max);
+	// draw the left sphere, blue with no hightlight 
+	glMaterialfv(GL_FRONT, GL_AMBIENT, zeroMaterial);
+	glMaterialfv(GL_FRONT, GL_DIFFUSE, blueDiffuse);
+	glMaterialfv(GL_FRONT, GL_SPECULAR, zeroMaterial);
+	glMaterialf(GL_FRONT, GL_SHININESS, noShininess);
 
-	glColor3f(0.0f, 1.0f, 1.0f);
-	glutWireSphere(0.5, 10, 10);
-	glBegin(GL_LINES);
+	glPushMatrix();
+	glTranslatef(-3.75, 0, 0);
+	// glutSolidSphere(radius, slices - lines of longitude, stacks - lines of latitude);
+	glutSolidSphere(1.0, resolution, resolution);  // glutSolidSphere is a convenience function that sets up a gluSphere,  
+	//     and...automatically computes normals for us
+	glPopMatrix();
 
-	//x axis -red
-	glColor3f(1.0f, 0.0f, 0.0f);
-	glVertex3f(0.0f, 0.0f, 0.0f);
-	glVertex3f(2.0f, 0.0f, 0.0f);
+	// draw the right sphere, blue with red ambient
+	glMaterialfv(GL_FRONT, GL_AMBIENT, redAmbient);
+	glMaterialfv(GL_FRONT, GL_DIFFUSE, blueDiffuse);
+	glMaterialfv(GL_FRONT, GL_SPECULAR, zeroMaterial);
+	glMaterialf(GL_FRONT, GL_SHININESS, noShininess);
 
-	//y axis -green
-	glColor3f(0.0f, 1.0f, 0.0f);
-	glVertex3f(0.0f, 0.0f, 0.0f);
-	glVertex3f(0.0f, 2.0f, 0.0f);
+	glPushMatrix();
+	glTranslatef(3.75, 0, 0);
+	glutSolidSphere(1.0, resolution, resolution);
+	glPopMatrix();
 
-	//z axis - blue
-	glColor3f(0.0f, 0.0f, 1.0f);
-	glVertex3f(0.0f, 0.0f, 0.0f);
-	glVertex3f(0.0f, 0.0f, 2.0f);
+	// draw a red floor
+	glMaterialfv(GL_FRONT, GL_AMBIENT, redDiffuse);
+	glMaterialfv(GL_FRONT, GL_DIFFUSE, redDiffuse);
+	glMaterialfv(GL_FRONT, GL_SPECULAR, zeroMaterial);
+	glMaterialf(GL_FRONT, GL_SHININESS, noShininess);
 
+	glNormal3d(0, 1, 0);  // normal of the floor is pointing up
+
+	glPushMatrix();
+	glTranslatef(1.5, -1, 0);
+	glScalef(3, 0, 3);
+	glBegin(GL_POLYGON);
+	glVertex3f(0, 0, 0);
+	glVertex3f(0, 0, 1);
+	glVertex3f(1, 0, 1);
+	glVertex3f(1, 0, 0);
 	glEnd();
+	glPopMatrix();
 
 
-	drawBox(&min, &max);
+
+	GLUE_renderMeshObject(cubeMesh);
 
 	// swap the drawing buffers
 	glutSwapBuffers();
@@ -254,6 +325,7 @@ void keyPressed(unsigned char key, int x, int y)
 		case KEY_MOVE_FORWARD:
 			motionKeyStates.MoveForward = KEYSTATE_DOWN;
 			keyboardMotion.Surge = MOTION_FORWARD;
+
 
 			break;
 		case KEY_MOVE_BACKWARD:
@@ -394,19 +466,39 @@ void idle(void)
 
 void init(void)
 {
-
-	initLights();
 	
-	//load assets
-	cubeMesh = GLUE_loadMeshObject("pumpkin.obj");
-	cubeMesh->material = blueMaterial;
-	Vector3D scale = { 0.05, 0.05, 0.05 };
-	cubeMesh->scale = &scale;
+	// define the light color and intensity
+	GLfloat ambientLight[] = { 0.0, 0.0, 0.0, 1.0 };  // relying on global ambient
+	GLfloat diffuseLight[] = { 1.0, 1.0, 1.0, 1.0 };
+	GLfloat specularLight[] = { 1.0, 1.0, 1.0, 1.0 };
 
-	cubeMesh->offset = &offset;
+	//  the global ambient light level
+	GLfloat globalAmbientLight[] = { 0.4f, 0.4f, 0.4f, 1.0f };
 
-	loadPPM();
+	// set the global ambient light level
+	glLightModelfv(GL_LIGHT_MODEL_AMBIENT, globalAmbientLight);
 
+	// define the color and intensity for light 0
+	glLightfv(GL_LIGHT0, GL_AMBIENT, ambientLight);
+	glLightfv(GL_LIGHT0, GL_SPECULAR, diffuseLight);
+	glLightfv(GL_LIGHT0, GL_DIFFUSE, specularLight);
+
+	// enable lighting 
+	glEnable(GL_LIGHTING);
+	// enable light 0
+	glEnable(GL_LIGHT0);
+
+
+
+	glEnable(GL_DEPTH_TEST);
+
+	// make sure the normals are unit vectors
+	glEnable(GL_NORMALIZE);
+
+	cubeMesh = GLUE_loadMeshObject("cow.obj");
+	cubeMesh->material = &blueMaterial;
+	Vector3D rot = { 0, 0, 0 };
+	cubeMesh->rotation = &rot;
 }
 
 void think(void)
@@ -419,45 +511,52 @@ void think(void)
 		/* TEMPLATE: Move your object backward if .Surge < 0, or forward
 		if .Surge > 0 */
 		offset.x += keyboardMotion.Surge;
-		cubeMesh->offset = &offset;
+		cubeMesh->rotation = &offset;
 	}
 	if (keyboardMotion.Sway != MOTION_NONE) {
 		/* TEMPLATE: Move (strafe) your object left if .Sway < 0, or right
 		if .Sway > 0 */
 		offset.z += keyboardMotion.Sway;
-		cubeMesh->offset = &offset;
+		cubeMesh->rotation = &offset;
 	}
 	if (keyboardMotion.Heave != MOTION_NONE) {
 		/* TEMPLATE: Move your object down if .Heav e < 0, or up if .Heave > 0
 		*/
-		offset.y += keyboardMotion.Heave;
-		cubeMesh->offset = &offset;
+		offset.z += keyboardMotion.Heave;
+		cubeMesh->rotation = &offset;
 	}
+
+
 }
 
 void initLights(void)
 {
-	// Simple lighting setup
-	GLfloat globalAmbient[] = { 0.4f, 0.4f, 0.4f, 1 };
-	GLfloat lightPosition[] = { 5.0f, 5.0f, 5.0f, 1.0f };
-	GLfloat ambientLight[] = { 0, 0, 0, 1 };
-	GLfloat diffuseLight[] = { 1, 1, 1, 1 };
-	GLfloat specularLight[] = { 1, 1, 1, 1 };
-	// Configure global ambient lighting.
-	glLightModelfv(GL_LIGHT_MODEL_AMBIENT, globalAmbient);
-	// Configure Light 0.
-	glLightfv(GL_LIGHT0, GL_POSITION, lightPosition);
+
+	// define the light color and intensity
+	GLfloat ambientLight[] = { 0.0, 0.0, 0.0, 1.0 };  // relying on global ambient
+	GLfloat diffuseLight[] = { 1.0, 1.0, 1.0, 1.0 };
+	GLfloat specularLight[] = { 1.0, 1.0, 1.0, 1.0 };
+
+	//  the global ambient light level
+	GLfloat globalAmbientLight[] = { 0.4f, 0.4f, 0.4f, 1.0f };
+
+	// set the global ambient light level
+	glLightModelfv(GL_LIGHT_MODEL_AMBIENT, globalAmbientLight);
+
+	// define the color and intensity for light 0
 	glLightfv(GL_LIGHT0, GL_AMBIENT, ambientLight);
-	glLightfv(GL_LIGHT0, GL_DIFFUSE, diffuseLight);
-	glLightfv(GL_LIGHT0, GL_SPECULAR, specularLight);
-	// Enable lighting
+	glLightfv(GL_LIGHT0, GL_SPECULAR, diffuseLight);
+	glLightfv(GL_LIGHT0, GL_DIFFUSE, specularLight);
+
+	// enable lighting 
 	glEnable(GL_LIGHTING);
+	// enable light 0
 	glEnable(GL_LIGHT0);
-	// Make GL normalize the normal vectors we supply.
+
+	glEnable(GL_DEPTH_TEST);
+
+	// make sure the normals are unit vectors
 	glEnable(GL_NORMALIZE);
 
-	// Turn on depth testing so that polygons are drawn in the correct order
-	glEnable(GL_DEPTH_TEST);
-	// Enable use of simple GL colours as materials.
-	glEnable(GL_COLOR_MATERIAL);
+	
 }

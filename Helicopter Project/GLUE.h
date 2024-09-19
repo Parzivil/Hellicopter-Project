@@ -54,6 +54,8 @@ typedef struct GLUE_Colour {
 	GLfloat G;
 	GLfloat B;
 	GLfloat A;
+
+	const GLfloat* array[4];
 } GLUE_Colour;
 
 typedef struct GLUE_Position {
@@ -88,11 +90,17 @@ enum ParticleState
 enum OBJ_Line {
 	VERTEX, FACE
 };
-
+/*
 typedef struct Vector3D {
 	GLdouble x;
 	GLdouble y;
 	GLdouble z;
+} Vector3D;*/
+
+typedef struct Vector3D {
+	float x;
+	float y;
+	float z;
 } Vector3D;
 
 struct Point {
@@ -127,11 +135,13 @@ typedef struct GLUE_Camera {
 } GLUE_Camera;
 
 typedef struct GLUE_Material {
-	GLUE_Colour AmbientColour;
-	GLUE_Colour DiffuseColour;
-	GLUE_Colour SpecularColour;
+	GLfloat* AmbientColour[4];
+	GLfloat* DiffuseColour[4];
+	GLfloat* SpecularColour[4];
 	GLfloat Shininess;
 } GLUE_Material;
+
+
 
 typedef struct GLUE_Light{
 	GLUE_Position Position;
@@ -161,7 +171,7 @@ typedef struct {
 } meshObjectFace;
 
 typedef struct MeshOBJ {
-	GLUE_Material material;
+	GLUE_Material* material;
 	Vector3D* vertices;
 	Vector3D* normals;
 	meshObjectFace* faces;
@@ -170,11 +180,11 @@ typedef struct MeshOBJ {
 
 	Vector3D* scale;
 	Vector3D* rotation;
-	Vector3D* offset;
-	unsigned int normalCount;
-	unsigned int faceCount;
-	unsigned int texCoordCount;
-	unsigned int vertexCount;
+    Vector3D* offset;
+	int normalCount;
+	int faceCount;
+	int texCoordCount;
+	int vertexCount;
 } MeshOBJ;
 
 struct Camera {
@@ -362,5 +372,5 @@ void freeMeshObject(MeshOBJ* object);
 
 void loadPPM();
 
-void computeBoundingBox(MeshOBJ* object, Vector3D* min, Vector3D* max);
-void drawBox(Vector3D* min, Vector3D* max);
+//void computeBoundingBox(MeshOBJ* object, Vector3D* min, Vector3D* max);
+//void drawBox(Vector3D* min, Vector3D* max);
