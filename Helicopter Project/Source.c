@@ -1,6 +1,4 @@
-#include "GLUE.h"
-
-
+#include "GLUE3D.h"
 
 // Target frame rate (number of Frames Per Second).
 #define TARGET_FPS 60
@@ -92,7 +90,7 @@ void initLights(void);
 
 // Render objects as filled polygons (1) or wireframes (0). Default filled.
 int renderFillEnabled = 1;
-MeshOBJ* cubeMesh;
+GLUE_OBJ* cubeMesh;
 Vector3D rot = { 0, 0, 0 };
 Vector3D scale = { 1, 1, 1 };
 Vector3D location = { 0, 0, 0 };
@@ -274,7 +272,7 @@ void reshape(int width, int h)
 }
 
 void close(void) {
-	freeMeshObject(cubeMesh);
+	GLUE_freeMeshObject(cubeMesh);
 }
 
 void keyPressed(unsigned char key, int x, int y)

@@ -1,7 +1,15 @@
 #pragma once
 
 #include "GLUE_OBJ.h"
+#include <Windows.h>
 #include <freeglut.h>
+#include <math.h>
+#include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
+
+#define OBJ_DELIM ' '
+#define VERTEX_FLOAT_ACCURACY 9 //Number of digits in a vertex float
 
 typedef struct Vector3D {
 	GLfloat x;
