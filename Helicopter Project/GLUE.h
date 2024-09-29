@@ -12,6 +12,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include "GLUE_OBJ.h"
 
 
 #define PI 3.14159265359
@@ -135,9 +136,9 @@ typedef struct GLUE_Camera {
 } GLUE_Camera;
 
 typedef struct GLUE_Material {
-	GLfloat* AmbientColour[4];
-	GLfloat* DiffuseColour[4];
-	GLfloat* SpecularColour[4];
+	GLfloat* AmbientColour;
+	GLfloat* DiffuseColour;
+	GLfloat* SpecularColour;
 	GLfloat Shininess;
 } GLUE_Material;
 
@@ -150,9 +151,6 @@ typedef struct GLUE_Light{
 	GLUE_Colour diffuseColour;
 	GLUE_Colour specularColour;
 } Light;
-
-
-
 
 typedef struct Vector2D{
 	GLdouble x;
@@ -192,7 +190,6 @@ struct Camera {
 	Vector3D center;
 	Vector3D up;
 };
-
 
 struct BoundingBox {
 	Vector3D min;
@@ -369,8 +366,6 @@ void initMeshObjectFace(meshObjectFace* face, char* faceData, int faceDataLength
 /// <param name="object"></param>
 void freeMeshObject(MeshOBJ* object);
 
-
-void loadPPM();
 
 //void computeBoundingBox(MeshOBJ* object, Vector3D* min, Vector3D* max);
 //void drawBox(Vector3D* min, Vector3D* max);

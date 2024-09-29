@@ -1,21 +1,7 @@
-/******************************************************************************
-*
-* Computer Graphics Programming 2020 Project Template v1.0 (11/04/2021)
-*
-* Based on: Animation Controller v1.0 (11/04/2021)
-*
-* This template provides a basic FPS-limited render loop for an animated scene,
-* plus keyboard handling for smooth game-like control of an object such as a
-* character or vehicle.
-*
-* A simple static lighting setup is provided via initLights(), which is not
-* included in the animationalcontrol.c template. There are no other changes.
-*
-******************************************************************************/
 #include "GLUE.h"
-/******************************************************************************
-* Animation & Timing Setup
-******************************************************************************/
+
+
+
 // Target frame rate (number of Frames Per Second).
 #define TARGET_FPS 60
 // Ideal time each frame should be displayed for (in milliseconds).
@@ -27,9 +13,6 @@ const unsigned int FRAME_TIME = 1000 / TARGET_FPS;
 const float FRAME_TIME_SEC = (1000 / TARGET_FPS) / 1000.0f;
 // Time we started preparing the current frame (in milliseconds since GLUT was initialized).
 unsigned int frameStartTime = 0;
-/******************************************************************************
- * Some Simple Definitions of Motion
- ******************************************************************************/
 
 #define MOTION_NONE 0				// No motion.
 #define MOTION_CLOCKWISE -1			// Clockwise rotation.
@@ -41,22 +24,13 @@ unsigned int frameStartTime = 0;
 #define MOTION_DOWN -1				// Downward motion.
 #define MOTION_UP 1					// Upward motion.
 
- // Represents the motion of an object on four axes (Yaw, Surge, Sway, and Heave).
- // 
- // You can use any numeric values, as specified in the comments for each axis. However,
- // the MOTION_ definitions offer an easy way to define a "unit" movement without using
- // magic numbers (e.g. instead of setting Surge = 1, you can set Surge = MOTION_FORWARD).
- //
+
 typedef struct {
 	int Yaw;		// Turn about the Z axis	[<0 = Clockwise, 0 = Stop, >0 = Anticlockwise]
 	int Surge;		// Move forward or back		[<0 = Backward,	0 = Stop, >0 = Forward]
 	int Sway;		// Move sideways (strafe)	[<0 = Left, 0 = Stop, >0 = Right]
 	int Heave;		// Move vertically			[<0 = Down, 0 = Stop, >0 = Up]
 } motionstate4_t;
-
-/******************************************************************************
- * Keyboard Input Handling Setup
- ******************************************************************************/
 
  // Represents the state of a single keyboard key.Represents the state of a single keyboard key.
 typedef enum {
@@ -88,9 +62,6 @@ motionkeys_t motionKeyStates = {
 motionstate4_t keyboardMotion = { MOTION_NONE, MOTION_NONE, MOTION_NONE, MOTION_NONE };
 
 // Define all character keys used for input (add any new key definitions here).
-// Note: USE ONLY LOWERCASE CHARACTERS HERE. The keyboard handler provided converts all
-// characters typed by the user to lowercase, so the SHIFT key is ignored.
-
 #define KEY_MOVE_FORWARD	'w'
 #define KEY_MOVE_BACKWARD	's'
 #define KEY_MOVE_LEFT		'a'
@@ -99,17 +70,12 @@ motionstate4_t keyboardMotion = { MOTION_NONE, MOTION_NONE, MOTION_NONE, MOTION_
 #define KEY_EXIT			27 // Escape key.
 
 // Define all GLUT special keys used for input (add any new key definitions here).
-
 #define SP_KEY_MOVE_UP		GLUT_KEY_UP
 #define SP_KEY_MOVE_DOWN	GLUT_KEY_DOWN
 #define SP_KEY_TURN_LEFT	GLUT_KEY_LEFT
 #define SP_KEY_TURN_RIGHT	GLUT_KEY_RIGHT
 
-
-
-/******************************************************************************
-* GLUT Callback Prototypes
-******************************************************************************/
+//Function prototypes
 void display(void);
 void reshape(int width, int h);
 void keyPressed(unsigned char key, int x, int y);
@@ -118,19 +84,19 @@ void keyReleased(unsigned char key, int x, int y);
 void specialKeyReleased(int key, int x, int y);
 void idle(void);
 void close(void);
-/******************************************************************************
-* Animation-Specific Function Prototypes (add your own here)
-******************************************************************************/
 void main(int argc, char** argv);
 void init(void);
 void think(void);
 void initLights(void);
-/******************************************************************************
-* Animation-Specific Setup (Add your own definitions, constants, and globals here)
-******************************************************************************/
+
+
 // Render objects as filled polygons (1) or wireframes (0). Default filled.
 int renderFillEnabled = 1;
 MeshOBJ* cubeMesh;
+Vector3D rot = { 0, 0, 0 };
+Vector3D scale = { 1, 1, 1 };
+Vector3D location = { 0, 0, 0 };
+
 
 struct Camera camera = { { 4, 4, 2 } , { 0, 0, 0 } , { 0, 1, 0 } };
 GLdouble cameraf[] = {4, 4, 2 , 0, 0, 0 , 0, 1, 0};
@@ -143,12 +109,12 @@ Vector3D offset = { 0, 0, -2 };
 Vector3D min;
 Vector3D max;
 
-GLfloat AmbientColour[4] = { 0, 0, 0, 1 };
-GLfloat DiffuseColour[4] = { 0, 0, 1, 1 };
-GLfloat SpecularColour[4] = { 0, 0, 0, 1 };
-const GLfloat Shininess = 1;
+const GLfloat AmbientColour[] = { 1, 0, 0, 1 };
+const GLfloat DiffuseColour[] = { 0, 0, 1, 1 };
+const GLfloat SpecularColour[] = { 0, 0, 0, 1 };
+const GLfloat Shininess = 0;
 
-GLUE_Material blueMaterial = { &AmbientColour, &DiffuseColour, &SpecularColour, 1 };
+GLUE_Material blueMaterial = { &AmbientColour, &DiffuseColour, &SpecularColour, 0 };
 
 int smoothOn = 0;
 
@@ -176,9 +142,6 @@ GLfloat cameraPosition[] = { 0, 0, 7 };
 GLfloat noShininess = 0.0;
 GLfloat highShininess = 100.0;
 
-/******************************************************************************
-* Entry Point (don't put anything except the main function here)
-******************************************************************************/
 void main(int argc, char** argv)
 {
 	// Initialise the OpenGL window.
@@ -212,9 +175,6 @@ void main(int argc, char** argv)
 	// Enter the main drawing loop (this will never return).
 	glutMainLoop();
 }
-/******************************************************************************
-* GLUT Callbacks (don't add any other functions here)
-******************************************************************************/
 
 void display(void)
 {
@@ -282,8 +242,6 @@ void display(void)
 	glVertex3f(1, 0, 0);
 	glEnd();
 	glPopMatrix();
-
-
 
 	GLUE_renderMeshObject(cubeMesh);
 
@@ -399,7 +357,6 @@ void keyReleased(unsigned char key, int x, int y)
 			keyboardMotion.Sway = (motionKeyStates.MoveLeft == KEYSTATE_DOWN) ?
 				MOTION_LEFT : MOTION_NONE;
 			break;
-
 	}
 }
 /*
@@ -432,14 +389,6 @@ void specialKeyReleased(int key, int x, int y)
 		keyboardMotion.Yaw = (motionKeyStates.TurnLeft == KEYSTATE_DOWN) ?
 			MOTION_ANTICLOCKWISE : MOTION_NONE;
 		break;
-		/*
-		Other Keyboard Functions (add any new special key controls here)
-		As per keyReleased, you only need to handle the key here if you want
-		something
-		to happen when the user lets go. If you just want something to happen
-		when the
-		key is first pressed, add you code to specialKeyPressed instead.
-		*/
 	}
 }
 
@@ -460,35 +409,10 @@ void idle(void)
 	think(); // Update our simulated world before the next call to display().
 	glutPostRedisplay(); // Tell OpenGL there's a new frame ready to be drawn.
 }
-/******************************************************************************
-* Animation-Specific Functions (Add your own functions at the end of this section)
-******************************************************************************/
 
 void init(void)
 {
-	
-	// define the light color and intensity
-	GLfloat ambientLight[] = { 0.0, 0.0, 0.0, 1.0 };  // relying on global ambient
-	GLfloat diffuseLight[] = { 1.0, 1.0, 1.0, 1.0 };
-	GLfloat specularLight[] = { 1.0, 1.0, 1.0, 1.0 };
-
-	//  the global ambient light level
-	GLfloat globalAmbientLight[] = { 0.4f, 0.4f, 0.4f, 1.0f };
-
-	// set the global ambient light level
-	glLightModelfv(GL_LIGHT_MODEL_AMBIENT, globalAmbientLight);
-
-	// define the color and intensity for light 0
-	glLightfv(GL_LIGHT0, GL_AMBIENT, ambientLight);
-	glLightfv(GL_LIGHT0, GL_SPECULAR, diffuseLight);
-	glLightfv(GL_LIGHT0, GL_DIFFUSE, specularLight);
-
-	// enable lighting 
-	glEnable(GL_LIGHTING);
-	// enable light 0
-	glEnable(GL_LIGHT0);
-
-
+	initLights();
 
 	glEnable(GL_DEPTH_TEST);
 
@@ -496,9 +420,11 @@ void init(void)
 	glEnable(GL_NORMALIZE);
 
 	cubeMesh = GLUE_loadMeshObject("cow.obj");
-	cubeMesh->material = &blueMaterial;
-	Vector3D rot = { 0, 0, 0 };
+
 	cubeMesh->rotation = &rot;
+	cubeMesh->scale = &scale;
+	cubeMesh->offset = &offset;
+	cubeMesh->material = &blueMaterial;
 }
 
 void think(void)
@@ -506,32 +432,28 @@ void think(void)
 	if (keyboardMotion.Yaw != MOTION_NONE) {
 		/* TEMPLATE: Turn your object right (clockwise) if .Yaw < 0, or left
 		(anticlockwise) if .Yaw > 0 */
+		cubeMesh->rotation->x -= keyboardMotion.Yaw;
+		
 	}
 	if (keyboardMotion.Surge != MOTION_NONE) {
 		/* TEMPLATE: Move your object backward if .Surge < 0, or forward
 		if .Surge > 0 */
-		offset.x += keyboardMotion.Surge;
-		cubeMesh->rotation = &offset;
+		cubeMesh->offset->z -= keyboardMotion.Surge * 0.2;
 	}
 	if (keyboardMotion.Sway != MOTION_NONE) {
 		/* TEMPLATE: Move (strafe) your object left if .Sway < 0, or right
 		if .Sway > 0 */
-		offset.z += keyboardMotion.Sway;
-		cubeMesh->rotation = &offset;
+		cubeMesh->offset->x += keyboardMotion.Sway * 0.2;
 	}
 	if (keyboardMotion.Heave != MOTION_NONE) {
 		/* TEMPLATE: Move your object down if .Heav e < 0, or up if .Heave > 0
 		*/
-		offset.z += keyboardMotion.Heave;
-		cubeMesh->rotation = &offset;
+		cubeMesh->offset->y += keyboardMotion.Heave * 0.2;
 	}
-
-
 }
 
 void initLights(void)
 {
-
 	// define the light color and intensity
 	GLfloat ambientLight[] = { 0.0, 0.0, 0.0, 1.0 };  // relying on global ambient
 	GLfloat diffuseLight[] = { 1.0, 1.0, 1.0, 1.0 };
@@ -552,11 +474,4 @@ void initLights(void)
 	glEnable(GL_LIGHTING);
 	// enable light 0
 	glEnable(GL_LIGHT0);
-
-	glEnable(GL_DEPTH_TEST);
-
-	// make sure the normals are unit vectors
-	glEnable(GL_NORMALIZE);
-
-	
 }

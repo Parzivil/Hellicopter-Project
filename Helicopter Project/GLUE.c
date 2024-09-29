@@ -415,9 +415,9 @@ void initMeshObjectFace(meshObjectFace* face, char* faceData, int maxFaceDataLen
 }
 
 void renderMaterial(GLUE_Material* material) {
-	glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, material->AmbientColour);
-	glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, material->DiffuseColour);
-	glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, material->SpecularColour);
+	glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, &material->AmbientColour);
+	glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, &material->DiffuseColour);
+	glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, &material->SpecularColour);
 	glMaterialf(GL_FRONT_AND_BACK, GL_SHININESS, material->Shininess);
 }
 
@@ -425,53 +425,19 @@ void renderMaterial(GLUE_Material* material) {
 	Render the faces of the specified Mesh Object in OpenGL.
 */
 void GLUE_renderMeshObject(MeshOBJ* object) {
+	glMaterialfv(GL_FRONT, GL_AMBIENT, object->material->AmbientColour);
+	glMaterialfv(GL_FRONT, GL_DIFFUSE, object->material->DiffuseColour);
+	glMaterialfv(GL_FRONT, GL_SPECULAR, object->material->SpecularColour);
+	glMaterialf(GL_FRONT, GL_SHININESS, object->material->Shininess);
 
-
-	GLfloat lightPosition[] = { 10.0, 10.0, 10.0, 1.0 };
-
-	// a material that is all zeros
-	GLfloat zeroMaterial[] = { 0.0, 0.0, 0.0, 1.0 };
-
-	// a red ambient material
-	GLfloat redAmbient[] = { 0.5, 0.0, 0.0, 1.0 };
-
-	// a blue diffuse material
-	GLfloat blueDiffuse[] = { 0.1f, 0.5f, 0.8f, 1.0f };
-
-	// a red diffuse material
-	GLfloat redDiffuse[] = { 1.0, 0.0, 0.0, 1.0 };
-
-	// a white specular material
-	GLfloat whiteSpecular[] = { 2.0, 2.0, 2.0, 1.0 };
-
-	// the degrees of shinnines (size of the specular highlight, bigger number means smaller highlight)
-	GLfloat noShininess = 0.0;
-	GLfloat highShininess = 100.0;
-
-	glMaterialfv(GL_FRONT, GL_AMBIENT, redAmbient);
-	glMaterialfv(GL_FRONT, GL_DIFFUSE, blueDiffuse); //whiteTranslucent);
-	glMaterialfv(GL_FRONT, GL_SPECULAR, whiteSpecular);
-	glMaterialf(GL_FRONT, GL_SHININESS, 50);
 	// Set up model transformations
 	glPushMatrix();
 
-	
-	// Apply scale
-	if (object->scale != NULL) {
-		//glScalef(object->scale->x, object->scale->y, object->scale->z);
-		//glScalef(0.5, 0.5, 0.5);
-	}
+	glScalef(object->scale->x, object->scale->y, object->scale->z);
 
-	// Apply translation (offset)
-	if (object->offset != NULL) {
-		//glTranslatef(object->offset->x, object->offset->y, object->offset->z);
-	}
+	glTranslatef(object->offset->x, object->offset->y, object->offset->z);
 
-	glScalef(0.5, 0.5, 0.5);
-	glTranslatef(0, 0, 0);
-
-
-	glRotatef(object->rotation->x, 1, 1, 0);
+	glRotatef(object->rotation->x, 0, 1, 0);
 
 	//Itterate through the faces
 	for (int faceNo = 0; faceNo < object->faceCount; faceNo++) {
