@@ -31,10 +31,10 @@
 
 ///***Needs to be combined***//
 typedef struct Colour {
-	float r;
-	float g;
-	float b;
-	float a;
+	GLfloat r;
+	GLfloat g;
+	GLfloat b;
+	GLfloat a;
 } Colour;
 
 typedef struct GLUE_Colour {
@@ -57,18 +57,18 @@ typedef struct GLUE_Position {
 /// Stores x and y positions
 /// </summary>
 typedef struct Location {
-	float x;
-	float y;
-	float z;
+	GLfloat x;
+	GLfloat y;
+	GLfloat z;
 }Location;
 
 /// <summary>
 /// Velocity
 /// </summary>
 typedef struct Velocity {
-	float vx;
-	float vy;
-	float vz;
+	GLfloat vx;
+	GLfloat vy;
+	GLfloat vz;
 }Velocity;
 
 
@@ -98,7 +98,7 @@ typedef struct Camera {
 }Camera;
 
 /// <summary>
-/// Draws a circle with a gradient to simulate 3D
+/// Draws a solid circle
 /// </summary>
 /// <param name="l">Location of the center of the circle</param>
 /// <param name="r">Radius of the circle</param>
@@ -113,14 +113,6 @@ void GLUE_CIRCLE(Location l, int r, Colour c);
 /// <param name="l2">Second Location</param>
 /// <returns>Returns a mid-point location</returns>
 Location GLUE_LineCenter(Location l1, Location l2);
-
-/// <summary>
-/// !!! WIP DO NOT USE !!! 
-/// Returns the center of a polygon array
-/// </summary>
-/// <param name="locations">Array of all polygon points</param>
-/// <returns>Returns a mid-point location</returns>
-Location GLUE_PolygonCenter(Location locations[]);
 
 /// <summary>
 /// 

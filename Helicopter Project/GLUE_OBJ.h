@@ -10,6 +10,7 @@
 
 #define OBJ_DELIM ' '
 #define VERTEX_FLOAT_ACCURACY 9 //Number of digits in a vertex float
+#define PI 3.14159265359
 
 typedef struct Vector3D {
 	GLfloat x;
@@ -50,7 +51,7 @@ typedef struct GLUE_OBJ {
 
 	Vector3D* scale;
 	Vector3D* rotation;
-	Vector3D* offset;
+	Vector3D* location;
 	int normalCount;
 	int faceCount;
 	int texCoordCount;
@@ -83,4 +84,19 @@ void GLUE_initMeshObjectFace(GLUE_OBJ_Face* face, char* faceData, int faceDataLe
 /// </summary>
 /// <param name="object"></param>
 void GLUE_freeMeshObject(GLUE_OBJ* object);
+
+/// <summary>
+/// Uses Polar coordinates to set the camera at an offset from the center of an object
+/// </summary>
+/// <param name="object"></param>
+/// <param name="distanceFromOBJ"> Vector from center of obj</param>
+/// <param name="verticalAngle"> 90 degrees is top down, 0 is purely horizontal</param>
+/// <param name="horizontalAngle">0 Degrees is back of object, 180 is front "Some models 'back' is not at the back"</param>
+void GLUE_SetCameraToObject(GLUE_OBJ* object, GLfloat distanceFromOBJ, GLfloat verticalAngle, GLfloat horizontalAngle);
+
+/// <summary>
+/// Sets the scale of the object to -1 by 1 and the average center of the object is at 0,0
+/// </summary>
+/// <param name="object"></param>
+void GLUE_NormalizeOBJ(GLUE_OBJ* object);
 

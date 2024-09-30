@@ -1,4 +1,5 @@
 #include "GLUE_OBJ.h"
+#include <float.h>
 
 
 GLUE_OBJ* GLUE_loadMeshObject(char* fileName) {
@@ -67,7 +68,6 @@ GLUE_OBJ* GLUE_loadMeshObject(char* fileName) {
 				vertSum.y += vertex.y;
 				vertSum.z += vertex.z;
 				currentVertexIndex++;
-				printf("%i: %f, %f, %f\n", currentVertexIndex, vertex.x, vertex.y, vertex.z);
 			}
 			else if (strcmp(keyword, "vt") == 0) {
 				Vector2D texCoord = { 0, 0 };
@@ -95,6 +95,8 @@ GLUE_OBJ* GLUE_loadMeshObject(char* fileName) {
 						vertSum.z / object->vertexCount };
 	Vector3D zero = { -1 * centerPoint.x, -1 * centerPoint.y, -1 * centerPoint.z };
 	//object->offset = &zero;
+
+	GLUE_NormalizeOBJ(object);
 
 	return object;
 }
@@ -192,9 +194,11 @@ void GLUE_renderMeshObject(GLUE_OBJ* object) {
 
 	glScalef(object->scale->x, object->scale->y, object->scale->z);
 
-	glTranslatef(object->offset->x, object->offset->y, object->offset->z);
+	glTranslatef(object->location->x, object->location->y, object->location->z);
 
-	glRotatef(object->rotation->x, 0, 1, 0);
+	glRotatef(object->rotation->x, 1, 0, 0);
+	glRotatef(object->rotation->y, 0, 1, 0);
+	glRotatef(object->rotation->z, 0, 0, 1);
 
 	//Itterate through the faces
 	for (int faceNo = 0; faceNo < object->faceCount; faceNo++) {
@@ -287,4 +291,139 @@ void drawBox(Vector3D* min, Vector3D* max) {
 	glVertex3f(max->x, min->y, min->z);
 
 	glEnd();
+}
+
+
+//WIP
+void GLUE_SetCameraToObject(GLUE_OBJ* object, GLfloat distanceFromOBJ, GLfloat theta, GLfloat phi) {
+    GLfloat cameraPosition[3];
+    GLfloat center[3];
+
+    // Convert angles to radians for calculations
+    GLfloat thetaRad = (PI / 180) * theta;  // Vertical angle
+    GLfloat phiRad = (PI / 180) * phi; // Horizontal angle
+    GLfloat rotationYRad = -1*(PI / 180) * object->rotation->y; // Rotation around Y-axis
+
+    // Calculate the camera's position relative to the object based on distance and angles
+    cameraPosition[0] = distanceFromOBJ * sin(thetaRad) * cos(phiRad);
+    cameraPosition[1] = distanceFromOBJ * sin(thetaRad) * sin(phiRad);
+    cameraPosition[2] = distanceFromOBJ * cos(thetaRad);
+
+    // Rotate the camera position around the Y-axis according to the object's rotation
+    GLfloat rotatedCameraPosition[3];
+    rotatedCameraPosition[0] = cameraPosition[0] * cos(rotationYRad) + cameraPosition[2] * sin(rotationYRad);
+    rotatedCameraPosition[1] = cameraPosition[1]; // Y position remains the same
+    rotatedCameraPosition[2] = -cameraPosition[0] * sin(rotationYRad) + cameraPosition[2] * cos(rotationYRad);
+
+    // Update the camera position by adding the object's location
+    cameraPosition[0] = object->location->x - rotatedCameraPosition[0];
+    cameraPosition[1] = object->location->y - rotatedCameraPosition[1];
+    cameraPosition[2] = object->location->z + rotatedCameraPosition[2];
+
+    // Set the center of the camera to be the object's location
+    center[0] = object->location->x;
+    center[1] = object->location->y;
+    center[2] = object->location->z;
+
+    // Print the camera position for debugging
+    printf("Camera Position: %f, %f, %f\n", cameraPosition[0], cameraPosition[1], cameraPosition[2]);
+
+    // Use gluLookAt to set the camera position and orientation
+    gluLookAt(cameraPosition[0], cameraPosition[1], cameraPosition[2], 
+              center[0], center[1], center[2], 
+              0, 1, 0);  // Assuming the up vector is along Y
+}
+
+void GLUE_NormalizeOBJ(GLUE_OBJ* object) {
+
+	GLfloat sum[3] = {0, 0, 0}; //Store the sum of all verticies
+	GLfloat min[3] = { FLT_MAX, FLT_MAX, FLT_MAX }; //Store max float value
+	GLfloat max[3] = { FLT_MIN, FLT_MIN, FLT_MIN }; //Store min float value
+
+	double scaleFactor = 0; //How much to scale the OBJ by
+
+	//Loop through all vertex to find min, max and average verticies
+	for (int i = 0; i < object->vertexCount; i++) {
+		GLfloat x = object->vertices[i].x;
+		GLfloat y = object->vertices[i].y;
+		GLfloat z = object->vertices[i].z;
+
+		//Add to sum of verticies
+		sum[0] += x;
+		sum[1] += y;
+		sum[2] += z;
+
+		//Find min vertex
+		if (x < min[0]) min[0] = x;
+		if (y < min[1]) min[1] = y;
+		if (z < min[2]) min[2] = z;
+
+		//Find max vertex
+		if (x > max[0]) max[0] = x;
+		if (y > max[1]) max[1] = y;
+		if (z > max[2]) max[2] = z;
+	}
+
+	for (int i = 0; i < 3; i++) if (fabs(min[i]) > scaleFactor) scaleFactor = fabs(min[i]);
+	for (int i = 0; i < 3; i++) if (fabs(max[i]) > scaleFactor) scaleFactor = fabs(max[i]);
+	
+
+	GLfloat averages[3] = {sum[0] / object->vertexCount, sum[1] / object->vertexCount, sum[2] / object->vertexCount };
+
+	//Used for debuging
+		printf("Before:\n");
+		printf("Average: %f, %f, %f\n", averages[0], averages[1], averages[2]);
+		printf("Min: %f, %f, %f\n", min[0], min[1], min[2]);
+		printf("Max: %f, %f, %f\n", max[0], max[1], max[2]);
+		printf("Scale Factor: %f\n", scaleFactor);
+		printf("---\n");
+	//
+
+	scaleFactor = 1 / scaleFactor;
+
+	//Set the new vertex postions
+	for (int i = 0; i < object->vertexCount; i++) {
+		//Set center location to 0,0,0
+		object->vertices[i].x += averages[0] * -1;
+		object->vertices[i].y += averages[1] * -1;
+		object->vertices[i].z += averages[2] * -1;
+
+		object->vertices[i].x *= scaleFactor;
+		object->vertices[i].y *= scaleFactor;
+		object->vertices[i].z *= scaleFactor;
+	}
+
+	//Used for debuging
+		GLfloat nsum[3] = { 0, 0, 0 }; //Store the sum of all verticies
+		GLfloat nmin[3] = { FLT_MAX, FLT_MAX, FLT_MAX }; //Store max float value
+		GLfloat nmax[3] = { FLT_MIN, FLT_MIN, FLT_MIN }; //Store min float value
+
+		for (int i = 0; i < object->vertexCount; i++) {
+			GLfloat x = object->vertices[i].x;
+			GLfloat y = object->vertices[i].y;
+			GLfloat z = object->vertices[i].z;
+
+			//Add to sum of verticies
+			nsum[0] += x;
+			nsum[1] += y;
+			nsum[2] += z;
+
+			//Find min vertex
+			if (x < nmin[0]) nmin[0] = x;
+			if (y < nmin[1]) nmin[1] = y;
+			if (z < nmin[2]) nmin[2] = z;
+
+			//Find max vertex
+			if (x > nmax[0]) nmax[0] = x;
+			if (y > nmax[1]) nmax[1] = y;
+			if (z > nmax[2]) nmax[2] = z;
+		}
+
+		GLfloat naverages[3] = { nsum[0] / object->vertexCount, nsum[1] / object->vertexCount, nsum[2] / object->vertexCount };
+		printf("After:\n");
+		printf("Average: %f, %f, %f\n", naverages[0], naverages[1], naverages[2]);
+		printf("Min: %f, %f, %f\n", nmin[0], nmin[1], nmin[2]);
+		printf("Max: %f, %f, %f\n", nmax[0], nmax[1], nmax[2]);
+		printf("1/Scale Factor: %f\n", scaleFactor);
+	//
 }

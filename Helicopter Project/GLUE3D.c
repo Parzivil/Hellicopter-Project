@@ -31,22 +31,6 @@ struct Location GLUE_LineCenter(Location firstLocation, Location secondLocation)
 	return middle;
 }
 
-struct Location GLUE_PolygonCenter(Location locations[]) {
-	int xSum = 0;
-	int ySum = 0;
-
-	int count = sizeof(locations) / sizeof(Location);
-
-	for (int i = 0; i < count; i++) {
-		xSum += locations[i].x;
-
-		ySum += locations[i].y;
-	}
-
-	Location middle = { xSum / count, ySum / count };
-	return middle;
-}
-
 float GLUE_LocationDistances(Location first, Location second) {
 	return sqrt(pow(first.x - second.x, 2) + pow(first.y - second.y, 2));
 }
