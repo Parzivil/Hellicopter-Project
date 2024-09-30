@@ -175,14 +175,14 @@ void init(void)
 
 void think(void){
 	if (keyboardMotion.Yaw != MOTION_NONE) {
-		HelicopterOBJ->rotation->y -= keyboardMotion.Yaw; //Rotate around axis
+		HelicopterOBJ->rotation->y += keyboardMotion.Yaw; //Rotate around axis
 	}
 	if (keyboardMotion.Surge != MOTION_NONE) {
-		HelicopterOBJ->location->z -= keyboardMotion.Surge * 0.2;//Move left/Right
-		HelicopterOBJ->rotation->x = -keyboardMotion.Surge * 5;
+		HelicopterOBJ->location->z += keyboardMotion.Surge * 0.2;//Move left/Right
+		HelicopterOBJ->rotation->x = keyboardMotion.Surge * 5;
 	}
 	if (keyboardMotion.Sway != MOTION_NONE) {
-		HelicopterOBJ->location->x += keyboardMotion.Sway * 0.2; //Move left/right
+		HelicopterOBJ->location->x -= keyboardMotion.Sway * 0.2; //Move left/right
 		HelicopterOBJ->rotation->z = -keyboardMotion.Sway * 5;
 		
 	}
@@ -285,7 +285,6 @@ void display(void)
 	glPopMatrix();
 
 	GLUE_renderMeshObject(HelicopterOBJ);
-
 	
 	//Draw ball around object for debugging
 	glPushMatrix();
@@ -296,6 +295,17 @@ void display(void)
 
 	// swap the drawing buffers
 	glutSwapBuffers();
+}
+
+/// <summary>
+/// Moves an object by its velocity
+/// </summary>
+/// <param name="obj"></param>
+/// <param name="vel">Velocity vector</param>
+void moveVelocity(GLUE_OBJ* obj, Vector3D vel) {
+	obj->location->x += vel.x;
+	obj->location->y += vel.y;
+	obj->location->z += vel.z;
 }
 
 //Main setup of the program
@@ -467,3 +477,5 @@ void specialKeyReleased(int key, int x, int y)
 		break;
 	}
 }
+
+
