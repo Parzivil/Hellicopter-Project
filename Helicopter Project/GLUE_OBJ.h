@@ -27,7 +27,7 @@ typedef struct GLUE_Material {
 	GLfloat* AmbientColour;
 	GLfloat* DiffuseColour;
 	GLfloat* SpecularColour;
-	GLfloat Shininess;
+	GLfloat* Shininess;
 } GLUE_Material;
 
 typedef struct GLUE_OBJ_FacePoint{

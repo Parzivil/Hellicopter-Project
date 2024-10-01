@@ -51,7 +51,13 @@ GLUE_OBJ* GLUE_loadMeshObject(char* fileName) {
 
 	if (object->vertexCount > 0)object->vertices = malloc(sizeof(Vector3D) * object->vertexCount);
 	if (object->texCoordCount > 0) object->texCoords = malloc(sizeof(Vector2D) * object->texCoordCount);
-	if (object->normalCount > 0) object->normals = malloc(sizeof(Vector3D) * object->normalCount);
+	if (object->normalCount > 0) {
+		object->normals = malloc(sizeof(Vector3D) * object->normalCount);
+	}
+	//Warn that the model imported does not contain normals
+	else {
+		printf("WARNING MODEL DOES NOT CONTAIN NORMALS!!\nLIGHTING WILL BE AFFECTED\n\n ");
+	}
 	if (object->faceCount > 0) object->faces = malloc(sizeof(GLUE_OBJ_Face) * object->faceCount);
 
 	// Parse the file again, reading the actual vertices, texture coordinates, normals, and faces.
@@ -75,6 +81,8 @@ GLUE_OBJ* GLUE_loadMeshObject(char* fileName) {
 				memcpy_s(&object->texCoords[currentTexCoordIndex], sizeof(Vector2D), &texCoord, sizeof(Vector2D));
 				currentTexCoordIndex++;
 			}
+
+			//SOME FILES DON'T INCLUDE NORMALS!!
 			else if (strcmp(keyword, "vn") == 0) {
 				Vector3D normal = { 0, 0, 0 };
 				sscanf_s(line, "%*s %f %f %f", &normal.x, &normal.y, &normal.z);
@@ -187,7 +195,7 @@ void GLUE_renderMeshObject(GLUE_OBJ* object) {
 	glMaterialfv(GL_FRONT, GL_AMBIENT, object->material->AmbientColour);
 	glMaterialfv(GL_FRONT, GL_DIFFUSE, object->material->DiffuseColour);
 	glMaterialfv(GL_FRONT, GL_SPECULAR, object->material->SpecularColour);
-	glMaterialf(GL_FRONT, GL_SHININESS, object->material->Shininess);
+	glMaterialf(GL_FRONT, GL_SHININESS, *object->material->Shininess);
 
 	// Set up model transformations
 	glPushMatrix();
@@ -216,6 +224,7 @@ void GLUE_renderMeshObject(GLUE_OBJ* object) {
 					Vector3D normal = object->normals[point.normalIndex];
 					glNormal3d(normal.x, normal.y, normal.z);
 				}
+
 
 				if (point.texCoordIndex >= 0) {
 					Vector2D texCoord = object->texCoords[point.texCoordIndex];
@@ -255,27 +264,6 @@ void GLUE_freeMeshObject(GLUE_OBJ* object)
 	}
 }
 
-
-///***WIP***///
-void computeBoundingBox(GLUE_OBJ* object, Vector3D* min, Vector3D* max) {
-	//if (object == NULL || object->vertices == NULL) return;
-
-	min->x = min->y = min->z = 0xFFFFFF;
-	max->x = max->y = max->z = -0xFFFFFF;
-
-	/*for (int i = 0; i < object->vertexCount; i++) {
-		Vector3D* v = &object->vertices[i];
-		if (v->x < min->x) min->x = v->x;
-		if (v->y < min->y) min->y = v->y;
-		if (v->z < min->z) min->z = v->z;
-		if (v->x > max->x) max->x = v->x;
-		if (v->y > max->y) max->y = v->y;
-		if (v->z > max->z) max->z = v->z;
-	}*/
-
-	printf("Min: %d, %d, %d\n", min->x, min->y, min->z);
-	printf("Max: %d, %d, %d\n", max->x, max->y, max->z);
-}
 
 void drawBox(Vector3D* min, Vector3D* max) {
 	glBegin(GL_LINES);
@@ -324,9 +312,6 @@ void GLUE_SetCameraToObject(GLUE_OBJ* object, GLfloat distanceFromOBJ, GLfloat t
     center[0] = object->location->x;
     center[1] = object->location->y;
     center[2] = object->location->z;
-
-    // Print the camera position for debugging
-    printf("Camera Position: %f, %f, %f\n", cameraPosition[0], cameraPosition[1], cameraPosition[2]);
 
     // Use gluLookAt to set the camera position and orientation
     gluLookAt(cameraPosition[0], cameraPosition[1], cameraPosition[2], 

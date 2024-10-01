@@ -17,8 +17,7 @@ unsigned int frameStartTime = 0; // Time we started preparing the current frame 
 #define MOTION_DOWN -1				// Downward motion.
 #define MOTION_UP 1					// Upward motion.
 
-
-char HelicopterOBJPath[] = "cow.obj"; //Path for the helicopter model
+#define HELICOPTER_DECELERATE_RATE 0.9 //Smaller is more responsive (must be > 0 < 1)
 
 typedef struct {
 	int Yaw;		// Turn about the Z axis	[<0 = Clockwise, 0 = Stop, >0 = Anticlockwise]
@@ -27,7 +26,7 @@ typedef struct {
 	int Heave;		// Move vertically			[<0 = Down, 0 = Stop, >0 = Up]
 } motionstate4_t;
 
- // Represents the state of a single keyboard key.Represents the state of a single keyboard key.
+// Represents the state of a single keyboard key.Represents the state of a single keyboard key.
 typedef enum {
 	KEYSTATE_UP = 0,	// Key is not pressed.
 	KEYSTATE_DOWN		// Key is pressed down.
@@ -44,6 +43,14 @@ typedef struct {
 	keystate_t TurnLeft;
 	keystate_t TurnRight;
 } motionkeys_t;
+
+typedef struct HelicopterModel {
+	GLUE_OBJ* Body;
+	GLUE_OBJ* Legs;
+	GLUE_OBJ* Propeller;
+	GLUE_OBJ* Rotor;
+} HelicopterModel;
+
 
 // Current state of all keys used to control our "player-controlled" object's motion.
 motionkeys_t motionKeyStates = {
@@ -70,6 +77,56 @@ motionstate4_t keyboardMotion = { MOTION_NONE, MOTION_NONE, MOTION_NONE, MOTION_
 #define SP_KEY_TURN_LEFT	GLUT_KEY_LEFT
 #define SP_KEY_TURN_RIGHT	GLUT_KEY_RIGHT
 
+// Render objects as filled polygons (1) or wireframes (0). Default filled.
+int renderFillEnabled = 1;
+
+//Paths for the helicopter components
+char HelicopterBodyOBJPath[] = "Helicopter_Body.obj"; //Path for the helicopter model
+char HelicopterLegsOBJPath[] = "Helicopter_Legs.obj"; //Path for the helicopter model
+char HelicopterPropellerOBJPath[] = "Helicopter_Propeller.obj"; //Path for the helicopter model
+char HelicopterRotorOBJPath[] = "Helicopter_Rotor.obj"; //Path for the helicopter model
+
+//Helicopter obj objects
+GLUE_OBJ* HelicopterBodyOBJ;
+GLUE_OBJ* HelicopterLegsOBJ;
+GLUE_OBJ* HelicopterPropellerOBJ;
+GLUE_OBJ* HelicopterRotorOBJ;
+
+HelicopterModel helicopter; //Model for the helicopter
+
+Vector3D helicopterVeclocity = { 0, 0, 0 };
+
+Vector3D rot = { 0, 0, 0 };
+Vector3D scale = { 1, 1, 1 };
+Vector3D location = { 0, 0, 0 };
+
+GLint windowWidth = 800;
+GLint windowHeight = 400;
+
+Vector3D offset = { 0, 0, 0 };
+
+Vector3D min;
+Vector3D max;
+
+// the degrees of shinnines (size of the specular highlight, bigger number means smaller highlight)
+GLfloat noShininess = 0.0;
+GLfloat highShininess = 100.0;
+
+const GLfloat AmbientColour[] = { 0.5, 0.0, 0.0, 1.0 };
+const GLfloat DiffuseColour[] = { 0.1f, 0.5f, 0.8f, 1.0f };
+const GLfloat SpecularColour[] = { 1.0, 1.0, 1.0, 1.0 };
+
+GLUE_Material blueMaterial = { &AmbientColour, &DiffuseColour, &SpecularColour, &highShininess };
+
+int smoothOn = 1; //Smoothing of the entire scene
+
+GLfloat lightPosition[] = { 10.0, 10.0, 10.0, 1.0 }; //  position the light source 
+GLfloat zeroMaterial[] = { 0.0, 0.0, 0.0, 1.0 }; // a material that is all zeros
+GLfloat redAmbient[] = { 0.5, 0.0, 0.0, 1.0 }; // a red ambient material
+GLfloat blueDiffuse[] = { 0.1f, 0.5f, 0.8f, 1.0f }; // a blue diffuse material
+GLfloat redDiffuse[] = { 1.0, 0.0, 0.0, 1.0 }; // a red diffuse material
+GLfloat whiteSpecular[] = { 1.0, 1.0, 1.0, 1.0 }; // a white specular material
+
 //Function prototypes
 void display(void);
 void reshape(int width, int h);
@@ -83,60 +140,8 @@ void main(int argc, char** argv);
 void init(void);
 void think(void);
 void initLights(void);
-
-
-// Render objects as filled polygons (1) or wireframes (0). Default filled.
-int renderFillEnabled = 1;
-GLUE_OBJ* HelicopterOBJ;
-Vector3D rot = { 0, 0, 0 };
-Vector3D scale = { 1, 1, 1 };
-Vector3D location = { 0, 0, 0 };
-
-
-struct Camera camera = { { 4, 4, 2 } , { 0, 0, 0 } , { 0, 1, 0 } };
-GLdouble cameraf[] = {4, 4, 2 , 0, 0, 0 , 0, 1, 0};
-
-GLint windowWidth = 800;
-GLint windowHeight = 400;
-
-Vector3D offset = { 0, 0, 0 };
-
-Vector3D min;
-Vector3D max;
-
-const GLfloat AmbientColour[] = { 1, 0, 0, 1 };
-const GLfloat DiffuseColour[] = { 0, 0, 1, 1 };
-const GLfloat SpecularColour[] = { 0, 0, 0, 1 };
-const GLfloat Shininess = 0;
-
-GLUE_Material blueMaterial = { &AmbientColour, &DiffuseColour, &SpecularColour, 0 };
-
-int smoothOn = 1;
-
-//  position the light source 
-GLfloat lightPosition[] = { 10.0, 10.0, 10.0, 1.0 };
-
-// a material that is all zeros
-GLfloat zeroMaterial[] = { 0.0, 0.0, 0.0, 1.0 };
-
-// a red ambient material
-GLfloat redAmbient[] = { 0.5, 0.0, 0.0, 1.0 };
-
-// a blue diffuse material
-GLfloat blueDiffuse[] = { 0.1f, 0.5f, 0.8f, 1.0f };
-
-// a red diffuse material
-GLfloat redDiffuse[] = { 1.0, 0.0, 0.0, 1.0 };
-
-// a white specular material
-GLfloat whiteSpecular[] = { 1.0, 1.0, 1.0, 1.0 };
-
-GLfloat cameraPosition[] = { 0, 0, 7 };
-
-// the degrees of shinnines (size of the specular highlight, bigger number means smaller highlight)
-GLfloat noShininess = 0.0;
-GLfloat highShininess = 100.0;
-
+void moveVelocity(GLUE_OBJ* obj, Vector3D vel);
+void loadChopper(HelicopterModel* heli);
 
 void idle(void)
 {
@@ -165,31 +170,38 @@ void init(void)
 	// make sure the normals are unit vectors
 	glEnable(GL_NORMALIZE);
 
-	HelicopterOBJ = GLUE_loadMeshObject(HelicopterOBJPath); //Load object
+	loadChopper(&helicopter);
 
-	HelicopterOBJ->rotation = &rot;
-	HelicopterOBJ->scale = &scale;
-	HelicopterOBJ->location = &offset;
-	HelicopterOBJ->material = &blueMaterial;
 }
 
 void think(void){
+	//DECELERATE helicopter
+	if(helicopterVeclocity.x != 0) helicopterVeclocity.x *= HELICOPTER_DECELERATE_RATE;
+	if (helicopterVeclocity.y != 0) helicopterVeclocity.y *= HELICOPTER_DECELERATE_RATE;
+	if (helicopterVeclocity.z != 0) helicopterVeclocity.z *= HELICOPTER_DECELERATE_RATE;
+
+	//Left arrow / Right arrow
 	if (keyboardMotion.Yaw != MOTION_NONE) {
-		HelicopterOBJ->rotation->y += keyboardMotion.Yaw; //Rotate around axis
+		HelicopterBodyOBJ->rotation->y += keyboardMotion.Yaw; //Rotate around axis
 	}
+
+	//W/S
 	if (keyboardMotion.Surge != MOTION_NONE) {
-		HelicopterOBJ->location->z += keyboardMotion.Surge * 0.2;//Move left/Right
-		HelicopterOBJ->rotation->x = keyboardMotion.Surge * 5;
-	}
+		helicopterVeclocity.z = keyboardMotion.Surge * 0.2;//Move left/Right
+		HelicopterBodyOBJ->rotation->x = keyboardMotion.Surge * 5;
+	} 
+
+	//A/D
 	if (keyboardMotion.Sway != MOTION_NONE) {
-		HelicopterOBJ->location->x -= keyboardMotion.Sway * 0.2; //Move left/right
-		HelicopterOBJ->rotation->z = -keyboardMotion.Sway * 5;
-		
+		helicopterVeclocity.x -= keyboardMotion.Sway * 0.1; //Move forward backward
+		HelicopterBodyOBJ->rotation->z = -keyboardMotion.Sway * 5;
 	}
+	//Up arrow / down arrow
 	if (keyboardMotion.Heave != MOTION_NONE) {
-		HelicopterOBJ->location->y += keyboardMotion.Heave * 0.2;  //Move up/down
-		
+		helicopterVeclocity.y = keyboardMotion.Heave * 0.2; //Move up and down
 	}
+
+	moveVelocity(HelicopterBodyOBJ, helicopterVeclocity); //Adjust the helicopter position due to its velocity
 }
 
 void initLights(void)
@@ -235,7 +247,7 @@ void display(void)
 	// position light 0
 	glLightfv(GL_LIGHT0, GL_POSITION, lightPosition);
 
-	GLUE_SetCameraToObject(HelicopterOBJ, 3, 90, -20);
+	GLUE_SetCameraToObject(HelicopterBodyOBJ, 3, 270, 30);
 
 	glPushMatrix();
 	glutWireCube(25);
@@ -284,14 +296,18 @@ void display(void)
 	glEnd();
 	glPopMatrix();
 
-	GLUE_renderMeshObject(HelicopterOBJ);
+	GLUE_renderMeshObject(helicopter.Body);
+	GLUE_renderMeshObject(helicopter.Legs);
+	GLUE_renderMeshObject(helicopter.Propeller);
+	GLUE_renderMeshObject(helicopter.Rotor);
 	
 	//Draw ball around object for debugging
+	/*
 	glPushMatrix();
 	glTranslatef(HelicopterOBJ->location->x, HelicopterOBJ->location->y, HelicopterOBJ->location->z);
 	glRotatef(HelicopterOBJ->rotation->y, 0, 1, 0);
 	glutWireSphere(1, 20, 20); 
-	glPopMatrix();
+	glPopMatrix();*/
 
 	// swap the drawing buffers
 	glutSwapBuffers();
@@ -306,6 +322,39 @@ void moveVelocity(GLUE_OBJ* obj, Vector3D vel) {
 	obj->location->x += vel.x;
 	obj->location->y += vel.y;
 	obj->location->z += vel.z;
+}
+
+void loadChopper(HelicopterModel* heli) {
+	HelicopterBodyOBJ = GLUE_loadMeshObject(HelicopterBodyOBJPath); //Load object
+	HelicopterLegsOBJ = GLUE_loadMeshObject(HelicopterLegsOBJPath); //Load object
+	HelicopterPropellerOBJ = GLUE_loadMeshObject(HelicopterPropellerOBJPath); //Load object
+	HelicopterRotorOBJ = GLUE_loadMeshObject(HelicopterRotorOBJPath); //Load object
+
+	//Set helicopter struct to the individual components
+	heli->Body = HelicopterBodyOBJ;
+	heli->Legs = HelicopterLegsOBJ;
+	heli->Propeller = HelicopterPropellerOBJ;
+	heli->Rotor = HelicopterRotorOBJ;
+
+	HelicopterBodyOBJ->rotation = &rot;
+	HelicopterBodyOBJ->scale = &scale;
+	HelicopterBodyOBJ->location = &offset;
+	HelicopterBodyOBJ->material = &blueMaterial;
+
+	HelicopterLegsOBJ->rotation = heli->Body->rotation;
+	HelicopterLegsOBJ->scale = heli->Body->scale;
+	HelicopterLegsOBJ->location = heli->Body->location;
+	HelicopterLegsOBJ->material = heli->Body->material;
+
+	HelicopterPropellerOBJ->rotation = heli->Body->rotation;
+	HelicopterPropellerOBJ->scale = heli->Body->scale;
+	HelicopterPropellerOBJ->location = heli->Body->location;
+	HelicopterPropellerOBJ->material = heli->Body->material;
+
+	HelicopterRotorOBJ->rotation = heli->Body->rotation;
+	HelicopterRotorOBJ->scale = heli->Body->scale;
+	HelicopterRotorOBJ->location = heli->Body->location;
+	HelicopterRotorOBJ->material = heli->Body->material;
 }
 
 //Main setup of the program
@@ -369,7 +418,10 @@ void reshape(int width, int h)
 
 //Runs when window is closed
 void close(void) {
-	GLUE_freeMeshObject(HelicopterOBJ);
+	GLUE_freeMeshObject(HelicopterBodyOBJ);
+	GLUE_freeMeshObject(HelicopterLegsOBJ);
+	GLUE_freeMeshObject(HelicopterPropellerOBJ);
+	GLUE_freeMeshObject(HelicopterRotorOBJ);
 }
 
 //***** Keyboard controls *****//
