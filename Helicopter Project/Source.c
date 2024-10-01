@@ -142,6 +142,7 @@ void think(void);
 void initLights(void);
 void moveVelocity(GLUE_OBJ* obj, Vector3D vel);
 void loadChopper(HelicopterModel* heli);
+void drawDemoScene(int resolution);
 
 void idle(void)
 {
@@ -166,12 +167,9 @@ void init(void)
 	initLights();
 
 	glEnable(GL_DEPTH_TEST);
+	glEnable(GL_NORMALIZE); // make sure the normals are unit vectors
 
-	// make sure the normals are unit vectors
-	glEnable(GL_NORMALIZE);
-
-	loadChopper(&helicopter);
-
+	loadChopper(&helicopter); //Load the helicopter and its components
 }
 
 void think(void){
@@ -230,84 +228,26 @@ void initLights(void)
 
 void display(void)
 {
-	// sphere resolution
-	int resolution = 50;
+	int resolution = 50; // sphere resolution
 
-	if (smoothOn)
-		glShadeModel(GL_SMOOTH);
-	else
-		glShadeModel(GL_FLAT);
-
-	// clear the screen and depth buffer
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-	// load the identity matrix into the model view matrix
-	glLoadIdentity();
+	if (smoothOn) glShadeModel(GL_SMOOTH);
+	else glShadeModel(GL_FLAT);
+	
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // clear the screen and depth buffer
+	
+	glLoadIdentity(); // load the identity matrix into the model view matrix
 
 	// position light 0
 	glLightfv(GL_LIGHT0, GL_POSITION, lightPosition);
 
-	GLUE_SetCameraToObject(HelicopterBodyOBJ, 3, 270, 30);
+	GLUE_SetCameraToObject(HelicopterBodyOBJ, 3, 270, 30); //Link the camera and helicopter
 
-	glPushMatrix();
-	glutWireCube(25);
-	glPopMatrix();
-
-	// draw the left sphere, blue with no hightlight 
-	glMaterialfv(GL_FRONT, GL_AMBIENT, zeroMaterial);
-	glMaterialfv(GL_FRONT, GL_DIFFUSE, blueDiffuse);
-	glMaterialfv(GL_FRONT, GL_SPECULAR, zeroMaterial);
-	glMaterialf(GL_FRONT, GL_SHININESS, noShininess);
-
-	glPushMatrix();
-	glTranslatef(-3.75, 0, 0);
-	// glutSolidSphere(radius, slices - lines of longitude, stacks - lines of latitude);
-	glutSolidSphere(1.0, resolution, resolution);  // glutSolidSphere is a convenience function that sets up a gluSphere,  
-	//     and...automatically computes normals for us
-	glPopMatrix();
-
-	// draw the right sphere, blue with red ambient
-	glMaterialfv(GL_FRONT, GL_AMBIENT, redAmbient);
-	glMaterialfv(GL_FRONT, GL_DIFFUSE, blueDiffuse);
-	glMaterialfv(GL_FRONT, GL_SPECULAR, zeroMaterial);
-	glMaterialf(GL_FRONT, GL_SHININESS, noShininess);
-
-	glPushMatrix();
-	glTranslatef(3.75, 0, 0);
-	glutSolidSphere(1.0, resolution, resolution);
-	glPopMatrix();
-
-	// draw a red floor
-	glMaterialfv(GL_FRONT, GL_AMBIENT, redDiffuse);
-	glMaterialfv(GL_FRONT, GL_DIFFUSE, redDiffuse);
-	glMaterialfv(GL_FRONT, GL_SPECULAR, zeroMaterial);
-	glMaterialf(GL_FRONT, GL_SHININESS, noShininess);
-
-	glNormal3d(0, 1, 0);  // normal of the floor is pointing up
-
-	glPushMatrix();
-	glTranslatef(-0.5, -1, 0);
-	glScalef(3, 0, 3);
-	glBegin(GL_POLYGON);
-	glVertex3f(0, 0, 0);
-	glVertex3f(0, 0, 1);
-	glVertex3f(1, 0, 1);
-	glVertex3f(1, 0, 0);
-	glEnd();
-	glPopMatrix();
+	drawDemoScene(resolution); //Draw the demo spheres 
 
 	GLUE_renderMeshObject(helicopter.Body);
 	GLUE_renderMeshObject(helicopter.Legs);
 	GLUE_renderMeshObject(helicopter.Propeller);
 	GLUE_renderMeshObject(helicopter.Rotor);
-	
-	//Draw ball around object for debugging
-	/*
-	glPushMatrix();
-	glTranslatef(HelicopterOBJ->location->x, HelicopterOBJ->location->y, HelicopterOBJ->location->z);
-	glRotatef(HelicopterOBJ->rotation->y, 0, 1, 0);
-	glutWireSphere(1, 20, 20); 
-	glPopMatrix();*/
 
 	// swap the drawing buffers
 	glutSwapBuffers();
@@ -531,3 +471,52 @@ void specialKeyReleased(int key, int x, int y)
 }
 
 
+void drawDemoScene(int resolution) {
+	//Draw cube around area
+	glPushMatrix();
+	glutWireCube(25);
+	glPopMatrix();
+
+	// draw the left sphere, blue with no hightlight 
+	glMaterialfv(GL_FRONT, GL_AMBIENT, zeroMaterial);
+	glMaterialfv(GL_FRONT, GL_DIFFUSE, blueDiffuse);
+	glMaterialfv(GL_FRONT, GL_SPECULAR, zeroMaterial);
+	glMaterialf(GL_FRONT, GL_SHININESS, noShininess);
+
+	glPushMatrix();
+	glTranslatef(-3.75, 0, 0);
+	// glutSolidSphere(radius, slices - lines of longitude, stacks - lines of latitude);
+	glutSolidSphere(1.0, resolution, resolution);  // glutSolidSphere is a convenience function that sets up a gluSphere,  
+	//     and...automatically computes normals for us
+	glPopMatrix();
+
+	// draw the right sphere, blue with red ambient
+	glMaterialfv(GL_FRONT, GL_AMBIENT, redAmbient);
+	glMaterialfv(GL_FRONT, GL_DIFFUSE, blueDiffuse);
+	glMaterialfv(GL_FRONT, GL_SPECULAR, zeroMaterial);
+	glMaterialf(GL_FRONT, GL_SHININESS, noShininess);
+
+	glPushMatrix();
+	glTranslatef(3.75, 0, 0);
+	glutSolidSphere(1.0, resolution, resolution);
+	glPopMatrix();
+
+	// draw a red floor
+	glMaterialfv(GL_FRONT, GL_AMBIENT, redDiffuse);
+	glMaterialfv(GL_FRONT, GL_DIFFUSE, redDiffuse);
+	glMaterialfv(GL_FRONT, GL_SPECULAR, zeroMaterial);
+	glMaterialf(GL_FRONT, GL_SHININESS, noShininess);
+
+	glNormal3d(0, 1, 0);  // normal of the floor is pointing up
+
+	glPushMatrix();
+	glTranslatef(-0.5, -1, 0);
+	glScalef(3, 0, 3);
+	glBegin(GL_POLYGON);
+	glVertex3f(0, 0, 0);
+	glVertex3f(0, 0, 1);
+	glVertex3f(1, 0, 1);
+	glVertex3f(1, 0, 0);
+	glEnd();
+	glPopMatrix();
+}
