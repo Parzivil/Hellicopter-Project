@@ -49,6 +49,9 @@ typedef struct HelicopterModel {
 	GLUE_OBJ* Legs;
 	GLUE_OBJ* Propeller;
 	GLUE_OBJ* Rotor;
+	Vector3D Velocity;
+	float PropellerSpeed;
+
 } HelicopterModel;
 
 
@@ -143,6 +146,7 @@ void initLights(void);
 void moveVelocity(GLUE_OBJ* obj, Vector3D vel);
 void loadChopper(HelicopterModel* heli);
 void drawDemoScene(int resolution);
+void updateHelicopter(HelicopterModel* heli);
 
 void idle(void)
 {
@@ -174,9 +178,9 @@ void init(void)
 
 void think(void){
 	//DECELERATE helicopter
-	if(helicopterVeclocity.x != 0) helicopterVeclocity.x *= HELICOPTER_DECELERATE_RATE;
-	if (helicopterVeclocity.y != 0) helicopterVeclocity.y *= HELICOPTER_DECELERATE_RATE;
-	if (helicopterVeclocity.z != 0) helicopterVeclocity.z *= HELICOPTER_DECELERATE_RATE;
+	if(helicopter.Velocity.x != 0) helicopter.Velocity.x *= HELICOPTER_DECELERATE_RATE;
+	if (helicopter.Velocity.y != 0) helicopter.Velocity.y *= HELICOPTER_DECELERATE_RATE;
+	if (helicopter.Velocity.z != 0) helicopter.Velocity.z *= HELICOPTER_DECELERATE_RATE;
 
 	//Left arrow / Right arrow
 	if (keyboardMotion.Yaw != MOTION_NONE) {
@@ -185,21 +189,23 @@ void think(void){
 
 	//W/S
 	if (keyboardMotion.Surge != MOTION_NONE) {
-		helicopterVeclocity.z = keyboardMotion.Surge * 0.2;//Move left/Right
+		helicopter.Velocity.x = keyboardMotion.Surge * -0.2;//Move left/Right
 		HelicopterBodyOBJ->rotation->x = keyboardMotion.Surge * 5;
 	} 
 
 	//A/D
 	if (keyboardMotion.Sway != MOTION_NONE) {
-		helicopterVeclocity.x -= keyboardMotion.Sway * 0.1; //Move forward backward
+		helicopter.Velocity.z -= keyboardMotion.Sway * 0.01; //Move forward backward
 		HelicopterBodyOBJ->rotation->z = -keyboardMotion.Sway * 5;
 	}
 	//Up arrow / down arrow
 	if (keyboardMotion.Heave != MOTION_NONE) {
-		helicopterVeclocity.y = keyboardMotion.Heave * 0.2; //Move up and down
+		helicopter.Velocity.y = keyboardMotion.Heave * 0.2; //Move up and down
 	}
 
-	moveVelocity(HelicopterBodyOBJ, helicopterVeclocity); //Adjust the helicopter position due to its velocity
+	updateHelicopter(&helicopter);
+
+	//moveVelocity(helicopter.Body, helicopterVeclocity); //Adjust the helicopter position due to its velocity
 }
 
 void initLights(void)
@@ -240,7 +246,7 @@ void display(void)
 	// position light 0
 	glLightfv(GL_LIGHT0, GL_POSITION, lightPosition);
 
-	GLUE_SetCameraToObject(HelicopterBodyOBJ, 3, 270, 30); //Link the camera and helicopter
+	GLUE_SetCameraToObject(helicopter.Body, 3, 270, 30); //Link the camera and helicopter
 
 	drawDemoScene(resolution); //Draw the demo spheres 
 
@@ -262,6 +268,32 @@ void moveVelocity(GLUE_OBJ* obj, Vector3D vel) {
 	obj->location->x += vel.x;
 	obj->location->y += vel.y;
 	obj->location->z += vel.z;
+}
+
+void updateHelicopter(HelicopterModel* heli) {
+	//Move by its velocity
+	/*
+	heli->Body->location->x += heli->Velocity.x * sin((PI/180) * heli->Body->rotation->y);
+	heli->Body->location->y += heli->Velocity.y; //Vertical
+	heli->Body->location->z += heli->Velocity.z * cos((PI / 180) * heli->Body->rotation->y);*/
+	
+	// Convert yaw (rotation around Y axis) to radians
+	float yawRadians = (PI / 180) * heli->Body->rotation->y;
+
+	// Move forward based on the helicopter's orientation and velocity
+	heli->Body->location->x += heli->Velocity.z * sin(yawRadians);  // Side movement based on forward velocity
+	heli->Body->location->z += heli->Velocity.z * cos(yawRadians);  // Forward movement
+
+	// Move sideways based on the helicopter's sideways (X) velocity and orientation
+	heli->Body->location->x += heli->Velocity.x * cos(yawRadians);  // Right/Left movement
+	heli->Body->location->z -= heli->Velocity.x * sin(yawRadians);  // Right/Left movement
+
+	// Apply vertical movement directly (Y axis remains unaffected by yaw)
+	heli->Body->location->y += heli->Velocity.y;  // Vertical movement
+
+	//Spin the rotors
+
+
 }
 
 void loadChopper(HelicopterModel* heli) {
