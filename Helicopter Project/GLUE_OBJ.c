@@ -102,7 +102,7 @@ GLUE_OBJ* GLUE_loadMeshObject(char* fileName) {
 						vertSum.y / object->vertexCount,
 						vertSum.z / object->vertexCount };
 	Vector3D zero = { -1 * centerPoint.x, -1 * centerPoint.y, -1 * centerPoint.z };
-	//object->offset = &zero;
+
 
 	GLUE_NormalizeOBJ(object);
 
@@ -219,12 +219,10 @@ void GLUE_renderMeshObject(GLUE_OBJ* object) {
 			for (int pointNo = 0; pointNo < face.pointCount; pointNo++) {
 				GLUE_OBJ_FacePoint point = face.points[pointNo];
 
-
 				if (point.normalIndex >= 0) {
 					Vector3D normal = object->normals[point.normalIndex];
 					glNormal3d(normal.x, normal.y, normal.z);
 				}
-
 
 				if (point.texCoordIndex >= 0) {
 					Vector2D texCoord = object->texCoords[point.texCoordIndex];
@@ -233,7 +231,6 @@ void GLUE_renderMeshObject(GLUE_OBJ* object) {
 
 				Vector3D vertex = object->vertices[point.vertexIndex];
 				glVertex3f(vertex.x, vertex.y, vertex.z);
-
 			}
 
 			glEnd();
@@ -243,7 +240,7 @@ void GLUE_renderMeshObject(GLUE_OBJ* object) {
 }
 
 /*
-	Free the specified Mesh Object, including all of its vertices, texture coordinates, normals, and faces.
+*	Free the specified Mesh Object, including all of its vertices, texture coordinates, normals, and faces.
 */
 void GLUE_freeMeshObject(GLUE_OBJ* object)
 {
@@ -264,25 +261,6 @@ void GLUE_freeMeshObject(GLUE_OBJ* object)
 	}
 }
 
-
-void drawBox(Vector3D* min, Vector3D* max) {
-	glBegin(GL_LINES);
-	glColor3b(1, 0.5, 0);
-
-	glVertex3f(min->x, min->y, min->z);
-	glVertex3f(min->x, min->y, max->z);
-
-	glVertex3f(min->x, min->y, min->z);
-	glVertex3f(min->x, max->y, min->z);
-
-	glVertex3f(min->x, min->y, min->z);
-	glVertex3f(max->x, min->y, min->z);
-
-	glEnd();
-}
-
-
-//WIP
 void GLUE_SetCameraToObject(GLUE_OBJ* object, GLfloat distanceFromOBJ, GLfloat theta, GLfloat phi) {
     GLfloat cameraPosition[3];
     GLfloat center[3];

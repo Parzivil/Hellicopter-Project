@@ -1,6 +1,5 @@
 #include "GLUE3D.h"
 
-
 #define TARGET_FPS 60 // Target frame rate (number of Frames Per Second).
 
 const unsigned int FRAME_TIME = 1000 / TARGET_FPS; // Ideal time each frame should be displayed for (in milliseconds).
@@ -50,8 +49,6 @@ typedef struct HelicopterModel {
 	GLUE_OBJ* Propeller;
 	GLUE_OBJ* Rotor;
 	Vector3D Velocity;
-	float PropellerSpeed;
-
 } HelicopterModel;
 
 
@@ -89,7 +86,7 @@ char HelicopterLegsOBJPath[] = "Helicopter_Legs.obj"; //Path for the helicopter 
 char HelicopterPropellerOBJPath[] = "Helicopter_Propeller.obj"; //Path for the helicopter model
 char HelicopterRotorOBJPath[] = "Helicopter_Rotor.obj"; //Path for the helicopter model
 
-//Helicopter obj objects
+//Helicopter component obj
 GLUE_OBJ* HelicopterBodyOBJ;
 GLUE_OBJ* HelicopterLegsOBJ;
 GLUE_OBJ* HelicopterPropellerOBJ;
@@ -97,31 +94,17 @@ GLUE_OBJ* HelicopterRotorOBJ;
 
 HelicopterModel helicopter; //Model for the helicopter
 
+//Helicopter global parameters
+Vector3D helicopterRotation = { 0, 0, 0 };
+Vector3D helicopterScale = { 1, 1, 1 };
+Vector3D helicopterLocation = { 0, 0, 0 };
 Vector3D helicopterVeclocity = { 0, 0, 0 };
 
-Vector3D rot = { 0, 0, 0 };
-Vector3D scale = { 1, 1, 1 };
-Vector3D location = { 0, 0, 0 };
-
-GLint windowWidth = 800;
-GLint windowHeight = 400;
-
-Vector3D offset = { 0, 0, 0 };
-
-Vector3D min;
-Vector3D max;
+Vector3D legScale = { 0.5, 0.5, 0.5 };
 
 // the degrees of shinnines (size of the specular highlight, bigger number means smaller highlight)
 GLfloat noShininess = 0.0;
 GLfloat highShininess = 100.0;
-
-const GLfloat AmbientColour[] = { 0.5, 0.0, 0.0, 1.0 };
-const GLfloat DiffuseColour[] = { 0.1f, 0.5f, 0.8f, 1.0f };
-const GLfloat SpecularColour[] = { 1.0, 1.0, 1.0, 1.0 };
-
-GLUE_Material blueMaterial = { &AmbientColour, &DiffuseColour, &SpecularColour, &highShininess };
-
-int smoothOn = 1; //Smoothing of the entire scene
 
 GLfloat lightPosition[] = { 10.0, 10.0, 10.0, 1.0 }; //  position the light source 
 GLfloat zeroMaterial[] = { 0.0, 0.0, 0.0, 1.0 }; // a material that is all zeros
@@ -129,6 +112,19 @@ GLfloat redAmbient[] = { 0.5, 0.0, 0.0, 1.0 }; // a red ambient material
 GLfloat blueDiffuse[] = { 0.1f, 0.5f, 0.8f, 1.0f }; // a blue diffuse material
 GLfloat redDiffuse[] = { 1.0, 0.0, 0.0, 1.0 }; // a red diffuse material
 GLfloat whiteSpecular[] = { 1.0, 1.0, 1.0, 1.0 }; // a white specular material
+
+const GLfloat AmbientColour[] = { 0.5, 0.0, 0.0, 1.0 };
+const GLfloat DiffuseColour[] = { 0.1f, 0.5f, 0.8f, 1.0f };
+const GLfloat SpecularColour[] = { 1.0, 1.0, 1.0, 1.0 };
+GLUE_Material blueMaterial = { &AmbientColour, &DiffuseColour, &SpecularColour, &highShininess };
+
+GLUE_OBJ* terrain;
+
+//Scene configuration variables
+int smoothOn = 1; //Smoothing of the entire scene
+
+GLint windowWidth = 800;
+GLint windowHeight = 400;
 
 //Function prototypes
 void display(void);
@@ -143,7 +139,6 @@ void main(int argc, char** argv);
 void init(void);
 void think(void);
 void initLights(void);
-void moveVelocity(GLUE_OBJ* obj, Vector3D vel);
 void loadChopper(HelicopterModel* heli);
 void drawDemoScene(int resolution);
 void updateHelicopter(HelicopterModel* heli);
@@ -174,38 +169,12 @@ void init(void)
 	glEnable(GL_NORMALIZE); // make sure the normals are unit vectors
 
 	loadChopper(&helicopter); //Load the helicopter and its components
-}
 
-void think(void){
-	//DECELERATE helicopter
-	if(helicopter.Velocity.x != 0) helicopter.Velocity.x *= HELICOPTER_DECELERATE_RATE;
-	if (helicopter.Velocity.y != 0) helicopter.Velocity.y *= HELICOPTER_DECELERATE_RATE;
-	if (helicopter.Velocity.z != 0) helicopter.Velocity.z *= HELICOPTER_DECELERATE_RATE;
-
-	//Left arrow / Right arrow
-	if (keyboardMotion.Yaw != MOTION_NONE) {
-		HelicopterBodyOBJ->rotation->y += keyboardMotion.Yaw; //Rotate around axis
-	}
-
-	//W/S
-	if (keyboardMotion.Surge != MOTION_NONE) {
-		helicopter.Velocity.x = keyboardMotion.Surge * -0.2;//Move left/Right
-		HelicopterBodyOBJ->rotation->x = keyboardMotion.Surge * 5;
-	} 
-
-	//A/D
-	if (keyboardMotion.Sway != MOTION_NONE) {
-		helicopter.Velocity.z -= keyboardMotion.Sway * 0.01; //Move forward backward
-		HelicopterBodyOBJ->rotation->z = -keyboardMotion.Sway * 5;
-	}
-	//Up arrow / down arrow
-	if (keyboardMotion.Heave != MOTION_NONE) {
-		helicopter.Velocity.y = keyboardMotion.Heave * 0.2; //Move up and down
-	}
-
-	updateHelicopter(&helicopter);
-
-	//moveVelocity(helicopter.Body, helicopterVeclocity); //Adjust the helicopter position due to its velocity
+	terrain = GLUE_Generate_Terrain(10, 5, 5, 2);
+	terrain->material = &blueDiffuse;
+	terrain->location = &helicopterLocation;
+	terrain->scale = &helicopterScale;
+	terrain->rotation = &helicopterRotation;
 }
 
 void initLights(void)
@@ -238,9 +207,9 @@ void display(void)
 
 	if (smoothOn) glShadeModel(GL_SMOOTH);
 	else glShadeModel(GL_FLAT);
-	
+
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // clear the screen and depth buffer
-	
+
 	glLoadIdentity(); // load the identity matrix into the model view matrix
 
 	// position light 0
@@ -255,44 +224,51 @@ void display(void)
 	GLUE_renderMeshObject(helicopter.Propeller);
 	GLUE_renderMeshObject(helicopter.Rotor);
 
+	//GLUE_renderMeshObject(terrain);
+
 	// swap the drawing buffers
 	glutSwapBuffers();
 }
 
-/// <summary>
-/// Moves an object by its velocity
-/// </summary>
-/// <param name="obj"></param>
-/// <param name="vel">Velocity vector</param>
-void moveVelocity(GLUE_OBJ* obj, Vector3D vel) {
-	obj->location->x += vel.x;
-	obj->location->y += vel.y;
-	obj->location->z += vel.z;
+void think(void){
+	//DECELERATE helicopter
+	if(helicopter.Velocity.x != 0) helicopter.Velocity.x *= HELICOPTER_DECELERATE_RATE;
+	if (helicopter.Velocity.y != 0) helicopter.Velocity.y *= HELICOPTER_DECELERATE_RATE;
+	if (helicopter.Velocity.z != 0) helicopter.Velocity.z *= HELICOPTER_DECELERATE_RATE;
+
+	//Left arrow / Right arrow
+	if (keyboardMotion.Yaw != MOTION_NONE) {
+		HelicopterBodyOBJ->rotation->y += keyboardMotion.Yaw; //Rotate around axis
+	}
+
+	//W/S
+	if (keyboardMotion.Surge != MOTION_NONE) {
+		helicopter.Velocity.x = keyboardMotion.Surge * -0.2;//Move left/Right
+	} 
+
+	//A/D
+	if (keyboardMotion.Sway != MOTION_NONE) {
+		helicopter.Velocity.z -= keyboardMotion.Sway * 0.01; //Move forward backward
+	}
+	//Up arrow / down arrow
+	if (keyboardMotion.Heave != MOTION_NONE) {
+		helicopter.Velocity.y = keyboardMotion.Heave * 0.2; //Move up and down
+	}
+
+	updateHelicopter(&helicopter);
 }
 
 void updateHelicopter(HelicopterModel* heli) {
-	//Move by its velocity
-	/*
-	heli->Body->location->x += heli->Velocity.x * sin((PI/180) * heli->Body->rotation->y);
-	heli->Body->location->y += heli->Velocity.y; //Vertical
-	heli->Body->location->z += heli->Velocity.z * cos((PI / 180) * heli->Body->rotation->y);*/
-	
-	// Convert yaw (rotation around Y axis) to radians
-	float yawRadians = (PI / 180) * heli->Body->rotation->y;
-
 	// Move forward based on the helicopter's orientation and velocity
-	heli->Body->location->x += heli->Velocity.z * sin(yawRadians);  // Side movement based on forward velocity
-	heli->Body->location->z += heli->Velocity.z * cos(yawRadians);  // Forward movement
+	heli->Body->location->x += heli->Velocity.z * sin((PI / 180) * heli->Body->rotation->y);  // Side movement based on forward velocity
+	heli->Body->location->z += heli->Velocity.z * cos((PI / 180) * heli->Body->rotation->y);  // Forward movement
 
-	// Move sideways based on the helicopter's sideways (X) velocity and orientation
-	heli->Body->location->x += heli->Velocity.x * cos(yawRadians);  // Right/Left movement
-	heli->Body->location->z -= heli->Velocity.x * sin(yawRadians);  // Right/Left movement
+	heli->Body->location->x += heli->Velocity.x * cos((PI / 180) * heli->Body->rotation->y);  // Right/Left movement
+	heli->Body->location->z -= heli->Velocity.x * sin((PI / 180) * heli->Body->rotation->y);  // Right/Left movement
 
-	// Apply vertical movement directly (Y axis remains unaffected by yaw)
 	heli->Body->location->y += heli->Velocity.y;  // Vertical movement
 
 	//Spin the rotors
-
 
 }
 
@@ -308,25 +284,80 @@ void loadChopper(HelicopterModel* heli) {
 	heli->Propeller = HelicopterPropellerOBJ;
 	heli->Rotor = HelicopterRotorOBJ;
 
-	HelicopterBodyOBJ->rotation = &rot;
-	HelicopterBodyOBJ->scale = &scale;
-	HelicopterBodyOBJ->location = &offset;
-	HelicopterBodyOBJ->material = &blueMaterial;
+	//Config Body
+	heli->Body->rotation = &helicopterRotation;
+	heli->Body->scale = &helicopterScale;
+	heli->Body->location = &helicopterLocation;
+	heli->Body->material = &blueMaterial;
 
-	HelicopterLegsOBJ->rotation = heli->Body->rotation;
-	HelicopterLegsOBJ->scale = heli->Body->scale;
-	HelicopterLegsOBJ->location = heli->Body->location;
-	HelicopterLegsOBJ->material = heli->Body->material;
+	//Congfig Legs
+	heli->Legs->rotation = heli->Body->rotation;
+	heli->Legs->scale = &legScale;
+	heli->Legs->location = heli->Body->location;
+	heli->Legs->material = heli->Body->material;
 
-	HelicopterPropellerOBJ->rotation = heli->Body->rotation;
-	HelicopterPropellerOBJ->scale = heli->Body->scale;
-	HelicopterPropellerOBJ->location = heli->Body->location;
-	HelicopterPropellerOBJ->material = heli->Body->material;
+	//Config Propeller
+	heli->Propeller->rotation = heli->Body->rotation;
+	heli->Propeller->scale = heli->Body->scale;
+	heli->Propeller->location = heli->Body->location;
+	heli->Propeller->material = heli->Body->material;
 
-	HelicopterRotorOBJ->rotation = heli->Body->rotation;
-	HelicopterRotorOBJ->scale = heli->Body->scale;
-	HelicopterRotorOBJ->location = heli->Body->location;
-	HelicopterRotorOBJ->material = heli->Body->material;
+	//Config Rotor
+	heli->Rotor->rotation = heli->Body->rotation;
+	heli->Rotor->scale = heli->Body->scale;
+	heli->Rotor->location = heli->Body->location;
+	heli->Rotor->material = heli->Body->material;
+}
+
+//REMOVE FOR FINAL VERSION
+void drawDemoScene(int resolution) {
+	//Draw cube around area
+	glPushMatrix();
+	glutWireCube(25);
+	glPopMatrix();
+
+	// draw the left sphere, blue with no hightlight 
+	glMaterialfv(GL_FRONT, GL_AMBIENT, zeroMaterial);
+	glMaterialfv(GL_FRONT, GL_DIFFUSE, blueDiffuse);
+	glMaterialfv(GL_FRONT, GL_SPECULAR, zeroMaterial);
+	glMaterialf(GL_FRONT, GL_SHININESS, noShininess);
+
+	glPushMatrix();
+	glTranslatef(-3.75, 0, 0);
+	// glutSolidSphere(radius, slices - lines of longitude, stacks - lines of latitude);
+	glutSolidSphere(1.0, resolution, resolution);  // glutSolidSphere is a convenience function that sets up a gluSphere,  
+	//     and...automatically computes normals for us
+	glPopMatrix();
+
+	// draw the right sphere, blue with red ambient
+	glMaterialfv(GL_FRONT, GL_AMBIENT, redAmbient);
+	glMaterialfv(GL_FRONT, GL_DIFFUSE, blueDiffuse);
+	glMaterialfv(GL_FRONT, GL_SPECULAR, zeroMaterial);
+	glMaterialf(GL_FRONT, GL_SHININESS, noShininess);
+
+	glPushMatrix();
+	glTranslatef(3.75, 0, 0);
+	glutSolidSphere(1.0, resolution, resolution);
+	glPopMatrix();
+
+	// draw a red floor
+	glMaterialfv(GL_FRONT, GL_AMBIENT, redDiffuse);
+	glMaterialfv(GL_FRONT, GL_DIFFUSE, redDiffuse);
+	glMaterialfv(GL_FRONT, GL_SPECULAR, zeroMaterial);
+	glMaterialf(GL_FRONT, GL_SHININESS, noShininess);
+
+	glNormal3d(0, 1, 0);  // normal of the floor is pointing up
+
+	glPushMatrix();
+	glTranslatef(-0.5, -1, 0);
+	glScalef(3, 0, 3);
+	glBegin(GL_POLYGON);
+	glVertex3f(0, 0, 0);
+	glVertex3f(0, 0, 1);
+	glVertex3f(1, 0, 1);
+	glVertex3f(1, 0, 0);
+	glEnd();
+	glPopMatrix();
 }
 
 //Main setup of the program
@@ -450,7 +481,6 @@ void keyReleased(unsigned char key, int x, int y)
 		break;
 	}
 }
-
 void specialKeyPressed(int key, int x, int y)
 {
 	switch (key) {
@@ -503,52 +533,3 @@ void specialKeyReleased(int key, int x, int y)
 }
 
 
-void drawDemoScene(int resolution) {
-	//Draw cube around area
-	glPushMatrix();
-	glutWireCube(25);
-	glPopMatrix();
-
-	// draw the left sphere, blue with no hightlight 
-	glMaterialfv(GL_FRONT, GL_AMBIENT, zeroMaterial);
-	glMaterialfv(GL_FRONT, GL_DIFFUSE, blueDiffuse);
-	glMaterialfv(GL_FRONT, GL_SPECULAR, zeroMaterial);
-	glMaterialf(GL_FRONT, GL_SHININESS, noShininess);
-
-	glPushMatrix();
-	glTranslatef(-3.75, 0, 0);
-	// glutSolidSphere(radius, slices - lines of longitude, stacks - lines of latitude);
-	glutSolidSphere(1.0, resolution, resolution);  // glutSolidSphere is a convenience function that sets up a gluSphere,  
-	//     and...automatically computes normals for us
-	glPopMatrix();
-
-	// draw the right sphere, blue with red ambient
-	glMaterialfv(GL_FRONT, GL_AMBIENT, redAmbient);
-	glMaterialfv(GL_FRONT, GL_DIFFUSE, blueDiffuse);
-	glMaterialfv(GL_FRONT, GL_SPECULAR, zeroMaterial);
-	glMaterialf(GL_FRONT, GL_SHININESS, noShininess);
-
-	glPushMatrix();
-	glTranslatef(3.75, 0, 0);
-	glutSolidSphere(1.0, resolution, resolution);
-	glPopMatrix();
-
-	// draw a red floor
-	glMaterialfv(GL_FRONT, GL_AMBIENT, redDiffuse);
-	glMaterialfv(GL_FRONT, GL_DIFFUSE, redDiffuse);
-	glMaterialfv(GL_FRONT, GL_SPECULAR, zeroMaterial);
-	glMaterialf(GL_FRONT, GL_SHININESS, noShininess);
-
-	glNormal3d(0, 1, 0);  // normal of the floor is pointing up
-
-	glPushMatrix();
-	glTranslatef(-0.5, -1, 0);
-	glScalef(3, 0, 3);
-	glBegin(GL_POLYGON);
-	glVertex3f(0, 0, 0);
-	glVertex3f(0, 0, 1);
-	glVertex3f(1, 0, 1);
-	glVertex3f(1, 0, 0);
-	glEnd();
-	glPopMatrix();
-}

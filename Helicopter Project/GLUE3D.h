@@ -189,3 +189,11 @@ void GLUE_Line(Location start, Location end, Colour startColour, Colour endColou
 /// Simple way to set the colour from a struct Colour
 /// </summary>
 void GLUE_COLOUR(Colour c);
+
+GLUE_OBJ* GLUE_Generate_Terrain(int resolution, GLfloat width, GLfloat length, GLfloat height);
+
+GLfloat perlinNoise(GLfloat x, GLfloat y);
+
+Vector3D CrossProduct(Vector3D* A, Vector3D* B);
+Vector3D* SubtractVector(Vector3D* A, Vector3D* B);
+Vector3D getNormal(Vector3D* A, Vector3D* B, Vector3D* C);

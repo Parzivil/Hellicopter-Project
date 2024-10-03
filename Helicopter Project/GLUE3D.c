@@ -145,3 +145,111 @@ void GLUE_Line(Location start, Location end, Colour startColour, Colour endColou
 
 	glEnd();
 }
+
+GLUE_OBJ* GLUE_Generate_Terrain(int resolution, GLfloat width, GLfloat length, GLfloat height) {
+	Vector3D vertSum = { 0, 0, 0 };
+	GLUE_OBJ* terrain;
+	int currentVertexIndex = 0;
+	int currentNormalIndex = 0;
+
+	// Allocate and initialize a new Mesh Object.
+	terrain = malloc(sizeof(GLUE_OBJ));
+	terrain->vertexCount = 0;
+	terrain->vertices = NULL;
+
+	terrain->texCoordCount = 0;
+	terrain->texCoords = NULL;
+
+	terrain->normalCount = 0;
+	terrain->normals = NULL;
+
+	terrain->faceCount = 0;
+	terrain->faces = NULL;
+
+
+	if (terrain->vertexCount > 0) terrain->vertices = malloc(sizeof(Vector3D) * terrain->vertexCount);
+	else return;
+
+	//Create even resolution x resoluion vertex grid
+	for (int x = 0; x < resolution; x++) {
+		for (int z = 0; z < resolution; z++) {
+			Vector3D vertex = { x, GLUE_RAND_MIN_MAX(0, height), z };
+
+			memcpy_s(&terrain->vertices[currentVertexIndex], sizeof(Vector3D), &vertex, sizeof(Vector3D));
+
+			vertSum.x += vertex.x;
+			vertSum.y += vertex.y;
+			vertSum.z += vertex.z;
+			currentVertexIndex++;
+		}
+	}
+
+	//Generate faces and normals
+	for (int x = 0; x < resolution; x++) {
+		for (int z = 0; z < resolution; z++) {
+			int div = 1; //Space between each vertex
+			int index = x * (div + 1) + z;
+
+			// C - B
+			// | / |
+			// A - D
+			// 
+			//***Top triangle***
+			Vector3D* A = &terrain->vertices[index]; //Bottom left
+			Vector3D* B = &terrain->vertices[index + (div + 1) + 1]; //Top right
+			Vector3D* C = &terrain->vertices[index + (div + 1)]; //Top left
+			Vector3D* D = &terrain->vertices[index + 1]; //Bottom right	
+			 
+			//Calculate face 
+
+			//Calculate Top Normal
+			Vector3D normalt = getNormal(A, B, C);
+			memcpy_s(&terrain->normals[currentNormalIndex], sizeof(Vector3D), &normalt, sizeof(Vector3D));
+			currentNormalIndex++;
+
+			//Calculate face 
+
+			//Calculate Bottom Normal
+			Vector3D normalb = getNormal(A, D, B);
+			memcpy_s(&terrain->normals[currentNormalIndex], sizeof(Vector3D), &normalb, sizeof(Vector3D));
+			currentNormalIndex++;
+		}
+	}
+
+	Vector3D centerPoint = { vertSum.x / terrain->vertexCount,
+					vertSum.y / terrain->vertexCount,
+					vertSum.z / terrain->vertexCount };
+	Vector3D zero = { -1 * centerPoint.x, -1 * centerPoint.y, -1 * centerPoint.z };
+	terrain->scale->x = 1 / width;
+	terrain->scale->z = 1 / length;
+}
+
+//WIP
+GLfloat perlinNoise(GLfloat x, GLfloat y) {
+	return;
+}
+
+Vector3D CrossProduct(Vector3D* A, Vector3D* B) {
+	Vector3D prod;
+
+	prod.x = A->y * B->z - A->z * B->y;
+	prod.y = A->z * B->x - A->x * B->z;
+	prod.z = A->x * B->y - A->y * B->x;
+	
+	return prod;
+}
+
+Vector3D* SubtractVector(Vector3D* A, Vector3D* B) {
+	Vector3D prod;
+
+	prod.x = A->x - B->x;
+	prod.y = A->y - B->y;
+	prod.z = A->z - B->z;
+
+	return &prod;
+}
+
+Vector3D getNormal(Vector3D* A, Vector3D* B, Vector3D* C) {
+	Vector3D normal = CrossProduct(SubtractVector(B, A), SubtractVector(C, A));
+	return normal;
+}
