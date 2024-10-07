@@ -195,7 +195,7 @@ void loadTerrain() {
 	terrain->location = &TerrainLocation;
 	terrain->scale = &TerrainScale;
 	terrain->rotation = &TerrainRotation;
-	terrain->textureID = loadPPM("TerrainTex.ppm");
+	terrain->textureID = GLUE_loadTexture("TerrainTex.ppm");
 }
 
 void initLights(void)

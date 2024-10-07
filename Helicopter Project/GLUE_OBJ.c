@@ -1,7 +1,6 @@
 #include "GLUE_OBJ.h"
 #include <float.h>
 
-
 GLUE_OBJ* GLUE_loadMeshObject(char* fileName) {
 	Vector3D vertSum = { 0, 0, 0 };
 	FILE* inFile = NULL;
@@ -450,7 +449,7 @@ void GLUE_NormalizeOBJ(GLUE_OBJ* object) {
 		}
 }
 
-int loadPPM(char* filename)
+int GLUE_loadTexture(char* filename)
 {
 	FILE* inFile; // File pointer
 	int width, height, maxVal; // Image metadata from PPM file format

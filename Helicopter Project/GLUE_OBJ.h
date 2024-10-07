@@ -115,4 +115,4 @@ void GLUE_NormalizeOBJ(GLUE_OBJ* object);
 /// </summary>
 /// <param name="filepath"></param>
 /// <returns></returns>
-int loadPPM(char* filepath);
+int GLUE_loadTexture(char* filepath);
