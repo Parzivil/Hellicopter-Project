@@ -45,12 +45,31 @@ typedef struct {
 
 typedef struct HelicopterModel {
 	GLUE_OBJ* Body;
+
+	//Leg Setup
 	GLUE_OBJ* Legs;
+	Vector3D LegScale;
+	Vector3D LegOffset;
+
+	//Propeller Setup
 	GLUE_OBJ* Propeller;
+	Vector3D PropellerScale;
+	Vector3D PropellerOffset;
+
+	//Rotor Setup
 	GLUE_OBJ* Rotor;
+	Vector3D RotorScale;
+	Vector3D RotorOffset;
+
 	Vector3D Velocity;
 } HelicopterModel;
 
+typedef struct PartPosistion {
+	Vector3D location;
+	Vector3D offset;
+	Vector3D scale;
+	Vector3D rotation;
+} PartPosistion;
 
 // Current state of all keys used to control our "player-controlled" object's motion.
 motionkeys_t motionKeyStates = {
@@ -86,7 +105,6 @@ char HelicopterLegsOBJPath[] = "Helicopter_Legs.obj"; //Path for the helicopter 
 char HelicopterPropellerOBJPath[] = "Helicopter_Propeller.obj"; //Path for the helicopter model
 char HelicopterRotorOBJPath[] = "Helicopter_Rotor.obj"; //Path for the helicopter model
 
-
 char TerrainPath[] = "Terrain.obj"; //Path for the helicopter model
 
 //Helicopter component obj
@@ -106,7 +124,7 @@ Vector3D helicopterVeclocity = { 0, 0, 0 };
 Vector3D legScale = { 0.5, 0.5, 0.5 };
 
 Vector3D TerrainRotation = { 0, 0, 0 };
-Vector3D TerrainScale = { 25, 25, 25 };
+Vector3D TerrainScale = { 50, 50, 50 };
 Vector3D TerrainLocation = { 0, 0, 0 };
 Vector3D TerrainrVeclocity = { 0, 0, 0 };
 
@@ -115,7 +133,7 @@ Vector3D TerrainrVeclocity = { 0, 0, 0 };
 GLfloat noShininess = 0.0;
 GLfloat highShininess = 100.0;
 
-GLfloat lightPosition[] = { 5.0, 5.0, 5.0, 1.0 }; //  position the light source 
+GLfloat lightPosition[] = { 10.0, 10.0, 10.0, 1.0 }; //  position the light source 
 GLfloat zeroMaterial[] = { 0.0, 0.0, 0.0, 1.0 }; // a material that is all zeros
 GLfloat redAmbient[] = { 0.5, 0.0, 0.0, 1.0 }; // a red ambient material
 GLfloat blueDiffuse[] = { 0.1f, 0.5f, 0.8f, 1.0f }; // a blue diffuse material
@@ -129,7 +147,7 @@ const GLfloat SpecularColour[] = { 1.0, 1.0, 1.0, 1.0 };
 GLUE_Material blueMaterial = { &skyColour, &DiffuseColour, &SpecularColour, &highShininess };
 
 
-const GLfloat TDiffuseColour[] = { 1, 1, 1, 1.0f };
+const GLfloat TDiffuseColour[] = { 0.5, 0.5, 1, 1.0f };
 const GLfloat TSpecularColour[] = { 1.0, 1.0, 1.0, 1.0 };
 GLUE_Material terrainMaterial = { &skyColour, &TDiffuseColour, &TSpecularColour, &highShininess };
 
@@ -184,6 +202,14 @@ void init(void)
 
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_NORMALIZE); // make sure the normals are unit vectors
+	glEnable(GL_FOG);
+
+	GLfloat fogColor[4] = { 0.5,0.5,0.5,1 };
+	// set the color of the fog
+	glFogfv(GL_FOG_COLOR, fogColor);
+
+	glFogf(GL_FOG_MODE, GL_EXP);
+	glFogf(GL_FOG_DENSITY, 0.1);
 
 	loadChopper(&helicopter); //Load the helicopter and its components
 	loadTerrain();
@@ -237,7 +263,7 @@ void display(void)
 	glLightfv(GL_LIGHT0, GL_POSITION, lightPosition);
 
 	//Set Camera Alignment
-	GLUE_SetCameraToObject(helicopter.Body, 4, 270, 20); //Link the camera and helicopter
+	GLUE_SetCameraToObject(helicopter.Body, 3, 270, 20); //Link the camera and helicopter
 
 	//Render the helicopter
 	GLUE_renderMeshObject(helicopter.Body);
@@ -292,8 +318,7 @@ void updateHelicopter(HelicopterModel* heli) {
 
 	heli->Body->location->y += heli->Velocity.y;  // Vertical movement
 
-	//Spin the rotors
-
+	
 }
 
 void loadChopper(HelicopterModel* heli) {
@@ -315,21 +340,21 @@ void loadChopper(HelicopterModel* heli) {
 	heli->Body->material = &blueMaterial;
 
 	//Congfig Legs
-	heli->Legs->rotation = heli->Body->rotation;
+	heli->Legs->rotation = &heli->Body->rotation;
 	heli->Legs->scale = &legScale;
-	heli->Legs->location = heli->Body->location;
+	heli->Legs->location = &heli->Body->location;
 	heli->Legs->material = heli->Body->material;
 
 	//Config Propeller
-	heli->Propeller->rotation = heli->Body->rotation;
-	heli->Propeller->scale = heli->Body->scale;
-	heli->Propeller->location = heli->Body->location;
+	heli->Propeller->rotation = &heli->Body->rotation;
+	heli->Propeller->scale = &heli->Body->scale;
+	heli->Propeller->location = &heli->Body->location;
 	heli->Propeller->material = heli->Body->material;
 
 	//Config Rotor
-	heli->Rotor->rotation = heli->Body->rotation;
-	heli->Rotor->scale = heli->Body->scale;
-	heli->Rotor->location = heli->Body->location;
+	heli->Rotor->rotation = &heli->Body->rotation;
+	heli->Rotor->scale = &heli->Body->scale;
+	heli->Rotor->location = &heli->Body->location;
 	heli->Rotor->material = heli->Body->material;
 }
 //Main setup of the program
@@ -384,7 +409,7 @@ void reshape(int width, int h)
 	glLoadIdentity();
 
 	// gluPerspective(fovy, aspect, near, far)
-	gluPerspective(45, (float)windowWidth / (float)windowHeight, 1, 20);
+	gluPerspective(60, (float)windowWidth / (float)windowHeight, 0.1, 50);
 
 	// change into model-view mode so that we can change the object positions
 	glMatrixMode(GL_MODELVIEW);
