@@ -129,7 +129,7 @@ const GLfloat SpecularColour[] = { 1.0, 1.0, 1.0, 1.0 };
 GLUE_Material blueMaterial = { &skyColour, &DiffuseColour, &SpecularColour, &highShininess };
 
 
-const GLfloat TDiffuseColour[] = { 0.07f, 0.425f, 0.082f, 1.0f };
+const GLfloat TDiffuseColour[] = { 1, 1, 1, 1.0f };
 const GLfloat TSpecularColour[] = { 1.0, 1.0, 1.0, 1.0 };
 GLUE_Material terrainMaterial = { &skyColour, &TDiffuseColour, &TSpecularColour, &highShininess };
 
