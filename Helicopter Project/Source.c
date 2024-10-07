@@ -274,7 +274,9 @@ void display(void)
 	//Render the Terrain
 	if (renderFillEnabled) GLUE_renderMeshObject(terrain);
 	else GLUE_renderWireframeObject(terrain);
-	
+
+	glColor4b(skyColour[0], skyColour[1], skyColour[2], skyColour[3]);
+	glutSolidCube((terrain->scale->x * 2) -1 );
 
 	// swap the drawing buffers
 	glutSwapBuffers();
@@ -409,7 +411,8 @@ void reshape(int width, int h)
 	glLoadIdentity();
 
 	// gluPerspective(fovy, aspect, near, far)
-	gluPerspective(60, (float)windowWidth / (float)windowHeight, 0.1, 50);
+	int diagonalScale = sqrt(pow(terrain->scale->x, 2) + pow(terrain->scale->y, 2) + pow(terrain->scale->z, 2));
+	gluPerspective(60, (float)windowWidth / (float)windowHeight, 0.1, diagonalScale);
 
 	// change into model-view mode so that we can change the object positions
 	glMatrixMode(GL_MODELVIEW);
