@@ -86,6 +86,9 @@ char HelicopterLegsOBJPath[] = "Helicopter_Legs.obj"; //Path for the helicopter 
 char HelicopterPropellerOBJPath[] = "Helicopter_Propeller.obj"; //Path for the helicopter model
 char HelicopterRotorOBJPath[] = "Helicopter_Rotor.obj"; //Path for the helicopter model
 
+
+char TerrainPath[] = "Terrain.obj"; //Path for the helicopter model
+
 //Helicopter component obj
 GLUE_OBJ* HelicopterBodyOBJ;
 GLUE_OBJ* HelicopterLegsOBJ;
@@ -102,21 +105,33 @@ Vector3D helicopterVeclocity = { 0, 0, 0 };
 
 Vector3D legScale = { 0.5, 0.5, 0.5 };
 
+Vector3D TerrainRotation = { 0, 0, 0 };
+Vector3D TerrainScale = { 25, 25, 25 };
+Vector3D TerrainLocation = { 0, 0, 0 };
+Vector3D TerrainrVeclocity = { 0, 0, 0 };
+
+
 // the degrees of shinnines (size of the specular highlight, bigger number means smaller highlight)
 GLfloat noShininess = 0.0;
 GLfloat highShininess = 100.0;
 
-GLfloat lightPosition[] = { 10.0, 10.0, 10.0, 1.0 }; //  position the light source 
+GLfloat lightPosition[] = { 5.0, 5.0, 5.0, 1.0 }; //  position the light source 
 GLfloat zeroMaterial[] = { 0.0, 0.0, 0.0, 1.0 }; // a material that is all zeros
 GLfloat redAmbient[] = { 0.5, 0.0, 0.0, 1.0 }; // a red ambient material
 GLfloat blueDiffuse[] = { 0.1f, 0.5f, 0.8f, 1.0f }; // a blue diffuse material
 GLfloat redDiffuse[] = { 1.0, 0.0, 0.0, 1.0 }; // a red diffuse material
 GLfloat whiteSpecular[] = { 1.0, 1.0, 1.0, 1.0 }; // a white specular material
 
-const GLfloat AmbientColour[] = { 0.5, 0.0, 0.0, 1.0 };
+const GLfloat skyColour[] = { 0.527, 0.804, 0.917, 1.0 };
+
 const GLfloat DiffuseColour[] = { 0.1f, 0.5f, 0.8f, 1.0f };
 const GLfloat SpecularColour[] = { 1.0, 1.0, 1.0, 1.0 };
-GLUE_Material blueMaterial = { &AmbientColour, &DiffuseColour, &SpecularColour, &highShininess };
+GLUE_Material blueMaterial = { &skyColour, &DiffuseColour, &SpecularColour, &highShininess };
+
+
+const GLfloat TDiffuseColour[] = { 0.07f, 0.425f, 0.082f, 1.0f };
+const GLfloat TSpecularColour[] = { 1.0, 1.0, 1.0, 1.0 };
+GLUE_Material terrainMaterial = { &skyColour, &TDiffuseColour, &TSpecularColour, &highShininess };
 
 GLUE_OBJ* terrain;
 
@@ -125,6 +140,8 @@ int smoothOn = 1; //Smoothing of the entire scene
 
 GLint windowWidth = 800;
 GLint windowHeight = 400;
+
+GLuint terrainTexture;
 
 //Function prototypes
 void display(void);
@@ -140,8 +157,8 @@ void init(void);
 void think(void);
 void initLights(void);
 void loadChopper(HelicopterModel* heli);
-void drawDemoScene(int resolution);
 void updateHelicopter(HelicopterModel* heli);
+void loadTerrain();
 
 void idle(void)
 {
@@ -169,12 +186,16 @@ void init(void)
 	glEnable(GL_NORMALIZE); // make sure the normals are unit vectors
 
 	loadChopper(&helicopter); //Load the helicopter and its components
+	loadTerrain();
+}
 
-	terrain = GLUE_Generate_Terrain(10, 5, 5, 2);
-	terrain->material = &blueDiffuse;
-	terrain->location = &helicopterLocation;
-	terrain->scale = &helicopterScale;
-	terrain->rotation = &helicopterRotation;
+void loadTerrain() {
+	terrain = GLUE_loadMeshObject(TerrainPath);
+	terrain->material = &terrainMaterial;
+	terrain->location = &TerrainLocation;
+	terrain->scale = &TerrainScale;
+	terrain->rotation = &TerrainRotation;
+	terrain->textureID = loadPPM("TerrainTex.ppm");
 }
 
 void initLights(void)
@@ -215,16 +236,19 @@ void display(void)
 	// position light 0
 	glLightfv(GL_LIGHT0, GL_POSITION, lightPosition);
 
-	GLUE_SetCameraToObject(helicopter.Body, 3, 270, 30); //Link the camera and helicopter
+	//Set Camera Alignment
+	GLUE_SetCameraToObject(helicopter.Body, 4, 270, 20); //Link the camera and helicopter
 
-	drawDemoScene(resolution); //Draw the demo spheres 
-
+	//Render the helicopter
 	GLUE_renderMeshObject(helicopter.Body);
 	GLUE_renderMeshObject(helicopter.Legs);
 	GLUE_renderMeshObject(helicopter.Propeller);
 	GLUE_renderMeshObject(helicopter.Rotor);
 
-	//GLUE_renderMeshObject(terrain);
+	//Render the Terrain
+	if (renderFillEnabled) GLUE_renderMeshObject(terrain);
+	else GLUE_renderWireframeObject(terrain);
+	
 
 	// swap the drawing buffers
 	glutSwapBuffers();
@@ -308,58 +332,6 @@ void loadChopper(HelicopterModel* heli) {
 	heli->Rotor->location = heli->Body->location;
 	heli->Rotor->material = heli->Body->material;
 }
-
-//REMOVE FOR FINAL VERSION
-void drawDemoScene(int resolution) {
-	//Draw cube around area
-	glPushMatrix();
-	glutWireCube(25);
-	glPopMatrix();
-
-	// draw the left sphere, blue with no hightlight 
-	glMaterialfv(GL_FRONT, GL_AMBIENT, zeroMaterial);
-	glMaterialfv(GL_FRONT, GL_DIFFUSE, blueDiffuse);
-	glMaterialfv(GL_FRONT, GL_SPECULAR, zeroMaterial);
-	glMaterialf(GL_FRONT, GL_SHININESS, noShininess);
-
-	glPushMatrix();
-	glTranslatef(-3.75, 0, 0);
-	// glutSolidSphere(radius, slices - lines of longitude, stacks - lines of latitude);
-	glutSolidSphere(1.0, resolution, resolution);  // glutSolidSphere is a convenience function that sets up a gluSphere,  
-	//     and...automatically computes normals for us
-	glPopMatrix();
-
-	// draw the right sphere, blue with red ambient
-	glMaterialfv(GL_FRONT, GL_AMBIENT, redAmbient);
-	glMaterialfv(GL_FRONT, GL_DIFFUSE, blueDiffuse);
-	glMaterialfv(GL_FRONT, GL_SPECULAR, zeroMaterial);
-	glMaterialf(GL_FRONT, GL_SHININESS, noShininess);
-
-	glPushMatrix();
-	glTranslatef(3.75, 0, 0);
-	glutSolidSphere(1.0, resolution, resolution);
-	glPopMatrix();
-
-	// draw a red floor
-	glMaterialfv(GL_FRONT, GL_AMBIENT, redDiffuse);
-	glMaterialfv(GL_FRONT, GL_DIFFUSE, redDiffuse);
-	glMaterialfv(GL_FRONT, GL_SPECULAR, zeroMaterial);
-	glMaterialf(GL_FRONT, GL_SHININESS, noShininess);
-
-	glNormal3d(0, 1, 0);  // normal of the floor is pointing up
-
-	glPushMatrix();
-	glTranslatef(-0.5, -1, 0);
-	glScalef(3, 0, 3);
-	glBegin(GL_POLYGON);
-	glVertex3f(0, 0, 0);
-	glVertex3f(0, 0, 1);
-	glVertex3f(1, 0, 1);
-	glVertex3f(1, 0, 0);
-	glEnd();
-	glPopMatrix();
-}
-
 //Main setup of the program
 void main(int argc, char** argv) {
 	// Initialise the OpenGL window.

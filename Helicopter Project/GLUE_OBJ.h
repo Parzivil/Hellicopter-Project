@@ -56,6 +56,8 @@ typedef struct GLUE_OBJ {
 	int faceCount;
 	int texCoordCount;
 	int vertexCount;
+
+	GLuint textureID;
 } GLUE_OBJ;
 
 /// <summary>
@@ -70,6 +72,14 @@ GLUE_OBJ* GLUE_loadMeshObject(char* fileName);
 /// </summary>
 /// <param name="object"></param>
 void GLUE_renderMeshObject(GLUE_OBJ* object);
+
+
+/// <summary>
+/// Displays the OBJ as a wireframe
+/// </summary>
+/// <param name="object"></param>
+void GLUE_renderWireframeObject(GLUE_OBJ* object);
+
 
 /// <summary>
 /// Creates a mesh object face
@@ -100,3 +110,9 @@ void GLUE_SetCameraToObject(GLUE_OBJ* object, GLfloat distanceFromOBJ, GLfloat v
 /// <param name="object"></param>
 void GLUE_NormalizeOBJ(GLUE_OBJ* object);
 
+/// <summary>
+/// Loads a texture from a PPM file
+/// </summary>
+/// <param name="filepath"></param>
+/// <returns></returns>
+int loadPPM(char* filepath);

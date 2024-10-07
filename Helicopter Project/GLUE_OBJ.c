@@ -192,10 +192,17 @@ void GLUE_initMeshObjectFace(GLUE_OBJ_Face* face, char* faceData, int maxFaceDat
 	Render the faces of the specified Mesh Object in OpenGL.
 */
 void GLUE_renderMeshObject(GLUE_OBJ* object) {
-	glMaterialfv(GL_FRONT, GL_AMBIENT, object->material->AmbientColour);
-	glMaterialfv(GL_FRONT, GL_DIFFUSE, object->material->DiffuseColour);
-	glMaterialfv(GL_FRONT, GL_SPECULAR, object->material->SpecularColour);
-	glMaterialf(GL_FRONT, GL_SHININESS, *object->material->Shininess);
+
+	if (object->textureID != NULL) {
+		glEnable(GL_TEXTURE_2D);
+		glBindTexture(GL_TEXTURE_2D, object->textureID);
+	}
+	else {
+		glMaterialfv(GL_FRONT, GL_AMBIENT, object->material->AmbientColour);
+		glMaterialfv(GL_FRONT, GL_DIFFUSE, object->material->DiffuseColour);
+		glMaterialfv(GL_FRONT, GL_SPECULAR, object->material->SpecularColour);
+		glMaterialf(GL_FRONT, GL_SHININESS, *object->material->Shininess);
+	}
 
 	// Set up model transformations
 	glPushMatrix();
@@ -207,7 +214,8 @@ void GLUE_renderMeshObject(GLUE_OBJ* object) {
 	glRotatef(object->rotation->x, 1, 0, 0);
 	glRotatef(object->rotation->y, 0, 1, 0);
 	glRotatef(object->rotation->z, 0, 0, 1);
-
+	glPolygonMode(GL_FRONT, GL_FILL);
+	glPolygonMode(GL_BACK, GL_FILL);
 	//Itterate through the faces
 	for (int faceNo = 0; faceNo < object->faceCount; faceNo++) {
 		GLUE_OBJ_Face face = object->faces[faceNo]; //Select one face
@@ -237,6 +245,75 @@ void GLUE_renderMeshObject(GLUE_OBJ* object) {
 		}
 	}
 	glPopMatrix();
+
+	if (object->textureID != NULL) {
+		glDisable(GL_TEXTURE_2D);
+		glDisable(GL_COLOR_MATERIAL);
+	}
+}
+
+
+/*
+	Render the faces of the specified Mesh Object in OpenGL as a wireframe.
+*/
+void GLUE_renderWireframeObject(GLUE_OBJ* object) {
+	if (object->textureID != NULL) {
+		glEnable(GL_TEXTURE_2D);
+		glBindTexture(GL_TEXTURE_2D, object->textureID);
+	}
+	else {
+		glMaterialfv(GL_FRONT, GL_AMBIENT, object->material->AmbientColour);
+		glMaterialfv(GL_FRONT, GL_DIFFUSE, object->material->DiffuseColour);
+		glMaterialfv(GL_FRONT, GL_SPECULAR, object->material->SpecularColour);
+		glMaterialf(GL_FRONT, GL_SHININESS, *object->material->Shininess);
+	}
+	// Set up model transformations
+	glPushMatrix();
+
+	glScalef(object->scale->x, object->scale->y, object->scale->z);
+
+	glTranslatef(object->location->x, object->location->y, object->location->z);
+
+	glRotatef(object->rotation->x, 1, 0, 0);
+	glRotatef(object->rotation->y, 0, 1, 0);
+	glRotatef(object->rotation->z, 0, 0, 1);
+	glPolygonMode(GL_FRONT, GL_LINE);
+	glPolygonMode(GL_BACK, GL_LINE);
+	//Itterate through the faces
+	for (int faceNo = 0; faceNo < object->faceCount; faceNo++) {
+		GLUE_OBJ_Face face = object->faces[faceNo]; //Select one face
+
+		//Ensure there are enough faces to draw a closed shape
+		if (face.pointCount >= 3) {
+			glBegin(GL_POLYGON);
+
+
+			for (int pointNo = 0; pointNo < face.pointCount; pointNo++) {
+				GLUE_OBJ_FacePoint point = face.points[pointNo];
+
+				if (point.normalIndex >= 0) {
+					Vector3D normal = object->normals[point.normalIndex];
+					glNormal3d(normal.x, normal.y, normal.z);
+				}
+
+				if (point.texCoordIndex >= 0) {
+					Vector2D texCoord = object->texCoords[point.texCoordIndex];
+					glTexCoord2d(texCoord.x, texCoord.y);
+				}
+
+				Vector3D vertex = object->vertices[point.vertexIndex];
+				glVertex3f(vertex.x, vertex.y, vertex.z);
+			}
+
+			glEnd();
+		}
+	}
+	glPopMatrix();
+
+	if (object->textureID != NULL) {
+		glDisable(GL_TEXTURE_2D);
+		glDisable(GL_COLOR_MATERIAL);
+	}
 }
 
 /*
@@ -332,16 +409,6 @@ void GLUE_NormalizeOBJ(GLUE_OBJ* object) {
 	
 
 	GLfloat averages[3] = {sum[0] / object->vertexCount, sum[1] / object->vertexCount, sum[2] / object->vertexCount };
-
-	//Used for debuging
-		printf("Before:\n");
-		printf("Average: %f, %f, %f\n", averages[0], averages[1], averages[2]);
-		printf("Min: %f, %f, %f\n", min[0], min[1], min[2]);
-		printf("Max: %f, %f, %f\n", max[0], max[1], max[2]);
-		printf("Scale Factor: %f\n", scaleFactor);
-		printf("---\n");
-	//
-
 	scaleFactor = 1 / scaleFactor;
 
 	//Set the new vertex postions
@@ -381,12 +448,107 @@ void GLUE_NormalizeOBJ(GLUE_OBJ* object) {
 			if (y > nmax[1]) nmax[1] = y;
 			if (z > nmax[2]) nmax[2] = z;
 		}
+}
 
-		GLfloat naverages[3] = { nsum[0] / object->vertexCount, nsum[1] / object->vertexCount, nsum[2] / object->vertexCount };
-		printf("After:\n");
-		printf("Average: %f, %f, %f\n", naverages[0], naverages[1], naverages[2]);
-		printf("Min: %f, %f, %f\n", nmin[0], nmin[1], nmin[2]);
-		printf("Max: %f, %f, %f\n", nmax[0], nmax[1], nmax[2]);
-		printf("1/Scale Factor: %f\n", scaleFactor);
-	//
+int loadPPM(char* filename)
+{
+	FILE* inFile; // File pointer
+	int width, height, maxVal; // Image metadata from PPM file format
+	int totalPixels; // Total number of pixels in the image
+
+	char tempChar; // Temporary character
+	
+	int i; // Counter variable for the current pixel in the image
+
+	char header[100]; // Input buffer for reading in the file header information
+
+	float RGBScaling; // If the original values are larger than 255
+
+	int red, green, blue; // Temporary variables for reading in the red, green, and blue data of each pixel
+
+	GLubyte* texture; // The texture buffer pointer
+
+	// Create one texture with the next available index
+	GLuint textureID;
+	glGenTextures(1, &textureID);
+
+	// Open file and check for errors in opening
+	errno_t error = fopen_s(&inFile, filename, "r");
+	if (error != 0 || inFile == NULL) {
+		printf("Error opening file %s\n", filename);
+		return -1; // Handle error appropriately
+	}
+	
+	fscanf_s(inFile, "%[^\n]\n", header, sizeof(header)); // Read in the first header line
+
+	// Make sure that the image begins with 'P3', which signifies a PPM file
+	if (header[0] != 'P' || header[1] != '3') {
+		printf("This is not a PPM file!\n");
+		fclose(inFile);
+		return -1; // Handle non-PPM file error
+	}
+
+	
+	printf("This is a PPM file\n"); // We have a PPM file
+
+	// Read in the first character of the next line
+	fscanf_s(inFile, "%c", &tempChar, 1);
+
+	// While we still have comment lines (which begin with #)
+	while (tempChar == '#') {
+		// Read in the comment
+		fscanf_s(inFile, "%[^\n]\n", header, sizeof(header));
+
+		// Print the comment
+		printf("%s\n", header);
+
+		// Read in the first character of the next line
+		fscanf_s(inFile, "%c", &tempChar, 1);
+	}
+
+	ungetc(tempChar, inFile); 	// The last one was not a comment character '#', so we need to put it back into the file stream (undo)
+
+
+	fscanf_s(inFile, "%d %d %d", &width, &height, &maxVal); // Read in the image height, width, and the maximum value
+
+	printf("%d rows  %d columns  max value= %d\n", height, width, maxVal); // Print out the information about the image file
+
+	totalPixels = width * height; // Compute the total number of pixels in the image
+
+	// Allocate enough memory for the image (3 bytes per pixel for RGB)
+	texture = malloc(3 * sizeof(GLubyte) * totalPixels);
+	if (!texture) {
+		printf("Memory allocation failed\n");
+		fclose(inFile);
+		return -1; // Handle memory allocation error
+	}
+
+	RGBScaling = 255.0f / maxVal; //Scale the RGB values
+
+	// Read pixel data
+	for (i = 0; i < totalPixels; i++) {
+		fscanf_s(inFile, "%d %d %d", &red, &green, &blue);
+
+		// Store the red, green, and blue data of the current pixel in the data array
+		texture[3 * totalPixels - 3 * i - 3] = (GLubyte)(red * RGBScaling);
+		texture[3 * totalPixels - 3 * i - 2] = (GLubyte)(green * RGBScaling);
+		texture[3 * totalPixels - 3 * i - 1] = (GLubyte)(blue * RGBScaling);
+	}
+
+	fclose(inFile);
+
+	glBindTexture(GL_TEXTURE_2D, textureID);
+
+	// Set the texture parameters
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR_MIPMAP_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_NEAREST);
+
+	// Create mipmaps
+	gluBuild2DMipmaps(GL_TEXTURE_2D, GL_RGB, width, height, GL_RGB, GL_UNSIGNED_BYTE, texture);
+
+	free(texture);
+
+	return textureID; // Return the current texture ID
 }
