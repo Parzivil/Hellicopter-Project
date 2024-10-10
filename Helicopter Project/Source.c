@@ -107,6 +107,31 @@ char HelicopterRotorOBJPath[] = "Helicopter_Rotor.obj"; //Path for the helicopte
 
 char TerrainPath[] = "Terrain.obj"; //Path for the helicopter model
 
+// the degrees of shinnines (size of the specular highlight, bigger number means smaller highlight)
+GLfloat noShininess = 0.0;
+GLfloat highShininess = 100.0;
+
+GLfloat lightPosition[] = { 10.0, 10.0, 10.0, 1.0 }; //  position the light source 
+
+GLfloat fogColor[4] = { 0.582,0.589,0.539,0.5 };
+GLfloat zeroMaterial[] = { 0.0, 0.0, 0.0, 1.0 }; // a material that is all zeros
+GLfloat redAmbient[] = { 0.5, 0.0, 0.0, 1.0 }; // a red ambient material
+GLfloat blueDiffuse[] = { 0.1f, 0.5f, 0.8f, 1.0f }; // a blue diffuse material
+GLfloat redDiffuse[] = { 1.0, 0.0, 0.0, 1.0 }; // a red diffuse material
+GLfloat whiteSpecular[] = { 1.0, 1.0, 1.0, 1.0 }; // a white specular material
+
+const GLfloat skyColour[] = { 0.527, 0.804, 0.917, 1.0 };
+
+const GLfloat DiffuseColour[] = { 0.1f, 0.5f, 0.8f, 1.0f };
+const GLfloat SpecularColour[] = { 1.0, 1.0, 1.0, 1.0 };
+GLUE_Material blueMaterial = { &blueDiffuse, &DiffuseColour, &SpecularColour, &highShininess };
+
+const GLfloat TDiffuseColour[] = { 0.5, 0.5, 1, 1.0f };
+const GLfloat TSpecularColour[] = { 1.0, 1.0, 1.0, 1.0 };
+GLUE_Material terrainMaterial = { &skyColour, &TDiffuseColour, &TSpecularColour, &highShininess };
+
+GLUE_OBJ* terrain;
+
 //Helicopter component obj
 GLUE_OBJ* HelicopterBodyOBJ;
 GLUE_OBJ* HelicopterLegsOBJ;
@@ -121,37 +146,32 @@ Vector3D helicopterScale = { 1, 1, 1 };
 Vector3D helicopterLocation = { 0, 0, 0 };
 Vector3D helicopterVeclocity = { 0, 0, 0 };
 
-Vector3D legScale = { 0.5, 0.5, 0.5 };
+//Legs
+Vector3D helicopterLegsRotation = { 0, 0, 0 };
+Vector3D helicopterLegsScale = { 0.5, 0.5, 0.5 };
+Vector3D helicopterLegsLocation = { 0, 0, 0 };
+Vector3D helicopterLegsOffset = { 0, -0.25, 0 };
+GLUE_Material helicopterLegsMaterial = { &redDiffuse, &blueDiffuse, &SpecularColour, &highShininess };
 
+//Rotor
+Vector3D helicopterRotorRotation = { 0, 0, 0 };
+Vector3D helicopterRotorScale = { 1, 1, 1 };
+Vector3D helicopterRotorLocation = { 0, 0, 0 };
+Vector3D helicopterRotorOffset = { 0, 0, 0 };
+GLUE_Material helicopterRotorMaterial;
+
+//Prop
+Vector3D helicopterPropRotation = { 0, 0, 0 };
+Vector3D helicopterPropScale = { 1, 1, 1 };
+Vector3D helicopterPropLocation = { 0.1, 0.2, 0 };
+Vector3D helicopterPropOffset = { 0.1, 0.2, 0 };
+GLUE_Material helicopterPropMaterial;
+
+//Terrain
 Vector3D TerrainRotation = { 0, 0, 0 };
-Vector3D TerrainScale = { 50, 50, 50 };
+Vector3D TerrainScale = { 25, 25, 25 };
 Vector3D TerrainLocation = { 0, 0, 0 };
 Vector3D TerrainrVeclocity = { 0, 0, 0 };
-
-
-// the degrees of shinnines (size of the specular highlight, bigger number means smaller highlight)
-GLfloat noShininess = 0.0;
-GLfloat highShininess = 100.0;
-
-GLfloat lightPosition[] = { 10.0, 10.0, 10.0, 1.0 }; //  position the light source 
-GLfloat zeroMaterial[] = { 0.0, 0.0, 0.0, 1.0 }; // a material that is all zeros
-GLfloat redAmbient[] = { 0.5, 0.0, 0.0, 1.0 }; // a red ambient material
-GLfloat blueDiffuse[] = { 0.1f, 0.5f, 0.8f, 1.0f }; // a blue diffuse material
-GLfloat redDiffuse[] = { 1.0, 0.0, 0.0, 1.0 }; // a red diffuse material
-GLfloat whiteSpecular[] = { 1.0, 1.0, 1.0, 1.0 }; // a white specular material
-
-const GLfloat skyColour[] = { 0.527, 0.804, 0.917, 1.0 };
-
-const GLfloat DiffuseColour[] = { 0.1f, 0.5f, 0.8f, 1.0f };
-const GLfloat SpecularColour[] = { 1.0, 1.0, 1.0, 1.0 };
-GLUE_Material blueMaterial = { &skyColour, &DiffuseColour, &SpecularColour, &highShininess };
-
-
-const GLfloat TDiffuseColour[] = { 0.5, 0.5, 1, 1.0f };
-const GLfloat TSpecularColour[] = { 1.0, 1.0, 1.0, 1.0 };
-GLUE_Material terrainMaterial = { &skyColour, &TDiffuseColour, &TSpecularColour, &highShininess };
-
-GLUE_OBJ* terrain;
 
 //Scene configuration variables
 int smoothOn = 1; //Smoothing of the entire scene
@@ -204,7 +224,7 @@ void init(void)
 	glEnable(GL_NORMALIZE); // make sure the normals are unit vectors
 	glEnable(GL_FOG);
 
-	GLfloat fogColor[4] = { 0.5,0.5,0.5,1 };
+
 	// set the color of the fog
 	glFogfv(GL_FOG_COLOR, fogColor);
 
@@ -227,30 +247,36 @@ void loadTerrain() {
 void initLights(void)
 {
 	// define the light color and intensity
-	GLfloat ambientLight[] = { 0.0, 0.0, 0.0, 1.0 };  // relying on global ambient
+	GLfloat ambientLight[] = { 0.0, 0.0, 1.0, 1.0 };  // relying on global ambient
 	GLfloat diffuseLight[] = { 1.0, 1.0, 1.0, 1.0 };
 	GLfloat specularLight[] = { 1.0, 1.0, 1.0, 1.0 };
-
-	//  the global ambient light level
-	GLfloat globalAmbientLight[] = { 0.4f, 0.4f, 0.4f, 1.0f };
+	GLfloat sunLight[] = { 1, 1, 1, 1 };
 
 	// set the global ambient light level
-	glLightModelfv(GL_LIGHT_MODEL_AMBIENT, globalAmbientLight);
+	glLightModelfv(GL_LIGHT_MODEL_AMBIENT, skyColour);
 
 	// define the color and intensity for light 0
 	glLightfv(GL_LIGHT0, GL_AMBIENT, ambientLight);
-	glLightfv(GL_LIGHT0, GL_SPECULAR, diffuseLight);
-	glLightfv(GL_LIGHT0, GL_DIFFUSE, specularLight);
+	glLightfv(GL_LIGHT0, GL_SPECULAR, specularLight);
+	glLightfv(GL_LIGHT0, GL_DIFFUSE, diffuseLight);
+
+	GLfloat direction[] = { 0, 1, 0 };
+	glLightfv(GL_LIGHT1, GL_SPOT_DIRECTION, direction);
+	GLfloat theta = 15.0;
+	glLightfv(GL_LIGHT1, GL_SPOT_CUTOFF, &theta);
+	glLightfv(GL_LIGHT1, GL_AMBIENT, ambientLight);
+	glLightfv(GL_LIGHT1, GL_SPECULAR, specularLight);
+	glLightfv(GL_LIGHT1, GL_DIFFUSE, diffuseLight);
 
 	// enable lighting 
 	glEnable(GL_LIGHTING);
-	// enable light 0
+	// enable lights
 	glEnable(GL_LIGHT0);
+	glEnable(GL_LIGHT1);
 }
 
 void display(void)
 {
-	int resolution = 50; // sphere resolution
 
 	if (smoothOn) glShadeModel(GL_SMOOTH);
 	else glShadeModel(GL_FLAT);
@@ -261,6 +287,10 @@ void display(void)
 
 	// position light 0
 	glLightfv(GL_LIGHT0, GL_POSITION, lightPosition);
+
+
+	GLfloat spotlightPosition[] = { helicopter.Body->location->x, helicopter.Body->location->y, helicopter.Body->location->z, 1 };
+	glLightfv(GL_LIGHT1, GL_POSITION, spotlightPosition);
 
 	//Set Camera Alignment
 	GLUE_SetCameraToObject(helicopter.Body, 3, 270, 20); //Link the camera and helicopter
@@ -275,8 +305,12 @@ void display(void)
 	if (renderFillEnabled) GLUE_renderMeshObject(terrain);
 	else GLUE_renderWireframeObject(terrain);
 
+	//Draw Skybox
 	glColor4b(skyColour[0], skyColour[1], skyColour[2], skyColour[3]);
 	glutSolidCube((terrain->scale->x * 2) -1 );
+
+
+	glutSolidCube(2);
 
 	// swap the drawing buffers
 	glutSwapBuffers();
@@ -320,7 +354,23 @@ void updateHelicopter(HelicopterModel* heli) {
 
 	heli->Body->location->y += heli->Velocity.y;  // Vertical movement
 
-	
+	//Set legs to offset Position
+	heli->Legs->location->x = (heli->Body->location->x + helicopterLegsOffset.x) * 1/helicopterLegsScale.x;
+	heli->Legs->location->y = (heli->Body->location->y + helicopterLegsOffset.y) * 1/helicopterLegsScale.y;
+	heli->Legs->location->z = (heli->Body->location->z + helicopterLegsOffset.z) * 1/helicopterLegsScale.y;
+
+	heli->Propeller->location->x = (heli->Body->location->x + helicopterPropOffset.x) * 1 / helicopterPropScale.x;
+	heli->Propeller->location->y = (heli->Body->location->y + helicopterPropOffset.y) * 1 / helicopterPropScale.y;
+	heli->Propeller->location->z = (heli->Body->location->z + helicopterPropOffset.z) * 1 / helicopterPropScale.y;
+
+	heli->Propeller->rotation->x += heli->Body->rotation->x ;
+	heli->Propeller->rotation->z += heli->Body->rotation->z ;
+	heli->Propeller->rotation->y += (10 * heli->Velocity.z) + 20; //Spin the Propeller
+
+	heli->Rotor->location->x = (heli->Body->location->x + helicopterRotorOffset.x) * 1 / helicopterRotorScale.x;
+	heli->Rotor->location->y = (heli->Body->location->y + helicopterRotorOffset.y) * 1 / helicopterRotorScale.y;
+	heli->Rotor->location->z = (heli->Body->location->z + helicopterRotorOffset.z) * 1 / helicopterRotorScale.y;
+
 }
 
 void loadChopper(HelicopterModel* heli) {
@@ -342,21 +392,21 @@ void loadChopper(HelicopterModel* heli) {
 	heli->Body->material = &blueMaterial;
 
 	//Congfig Legs
-	heli->Legs->rotation = &heli->Body->rotation;
-	heli->Legs->scale = &legScale;
-	heli->Legs->location = &heli->Body->location;
-	heli->Legs->material = heli->Body->material;
+	heli->Legs->rotation = heli->Body->rotation;
+	heli->Legs->scale = &helicopterLegsScale;
+	heli->Legs->location = &helicopterLegsLocation;
+	heli->Legs->material = &helicopterLegsMaterial;
 
 	//Config Propeller
-	heli->Propeller->rotation = &heli->Body->rotation;
-	heli->Propeller->scale = &heli->Body->scale;
-	heli->Propeller->location = &heli->Body->location;
+	heli->Propeller->rotation = &helicopterPropRotation;
+	heli->Propeller->scale = &helicopterPropScale;
+	heli->Propeller->location = &helicopterPropLocation;
 	heli->Propeller->material = heli->Body->material;
 
 	//Config Rotor
-	heli->Rotor->rotation = &heli->Body->rotation;
-	heli->Rotor->scale = &heli->Body->scale;
-	heli->Rotor->location = &heli->Body->location;
+	heli->Rotor->rotation = &helicopterRotorRotation;
+	heli->Rotor->scale = &helicopterRotorScale;
+	heli->Rotor->location = &helicopterRotorLocation;
 	heli->Rotor->material = heli->Body->material;
 }
 //Main setup of the program

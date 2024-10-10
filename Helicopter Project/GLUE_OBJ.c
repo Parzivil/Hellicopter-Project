@@ -196,12 +196,12 @@ void GLUE_renderMeshObject(GLUE_OBJ* object) {
 		glEnable(GL_TEXTURE_2D);
 		glBindTexture(GL_TEXTURE_2D, object->textureID);
 	}
-	else {
-		glMaterialfv(GL_FRONT, GL_AMBIENT, object->material->AmbientColour);
-		glMaterialfv(GL_FRONT, GL_DIFFUSE, object->material->DiffuseColour);
-		glMaterialfv(GL_FRONT, GL_SPECULAR, object->material->SpecularColour);
-		glMaterialf(GL_FRONT, GL_SHININESS, *object->material->Shininess);
-	}
+	
+	glMaterialfv(GL_FRONT, GL_AMBIENT, object->material->AmbientColour);
+	glMaterialfv(GL_FRONT, GL_DIFFUSE, object->material->DiffuseColour);
+	glMaterialfv(GL_FRONT, GL_SPECULAR, object->material->SpecularColour);
+	glMaterialf(GL_FRONT, GL_SHININESS, *object->material->Shininess);
+	
 
 	// Set up model transformations
 	glPushMatrix();
@@ -260,12 +260,12 @@ void GLUE_renderWireframeObject(GLUE_OBJ* object) {
 		glEnable(GL_TEXTURE_2D);
 		glBindTexture(GL_TEXTURE_2D, object->textureID);
 	}
-	else {
+	
 		glMaterialfv(GL_FRONT, GL_AMBIENT, object->material->AmbientColour);
 		glMaterialfv(GL_FRONT, GL_DIFFUSE, object->material->DiffuseColour);
 		glMaterialfv(GL_FRONT, GL_SPECULAR, object->material->SpecularColour);
 		glMaterialf(GL_FRONT, GL_SHININESS, *object->material->Shininess);
-	}
+	
 	// Set up model transformations
 	glPushMatrix();
 
