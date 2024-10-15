@@ -309,9 +309,6 @@ void display(void)
 	glColor4b(skyColour[0], skyColour[1], skyColour[2], skyColour[3]);
 	glutSolidCube((terrain->scale->x * 2) -1 );
 
-
-	glutSolidCube(2);
-
 	// swap the drawing buffers
 	glutSwapBuffers();
 }
